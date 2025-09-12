@@ -14,10 +14,10 @@
   --card: 0 0% 100%;
   --card-foreground: 240 10% 3.9%;
 
-  --border: 240 5.9% 90%;
-  --input: 240 5.9% 90%;
+  --border: 252 100% 97%; /* #F3F0FF */
+  --input: 252 100% 97%;
 
-  --primary: 240 5.9% 10%;
+  --primary: 255 74% 71%; /* #977CEC */
   --primary-foreground: 0 0% 98%;
 
   --secondary: 240 4.8% 95.9%;
@@ -29,7 +29,7 @@
   --destructive: 0 72.2% 50.6%;
   --destructive-foreground: 0 0% 98%;
 
-  --ring: 240 5.9% 10%;
+  --ring: 255 74% 71%; /* match #977CEC */
   --radius: 0.5rem;
 }
 
