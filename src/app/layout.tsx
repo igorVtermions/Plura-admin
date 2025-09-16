@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Rubik, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
+import HeaderWrapper from "@/components/layout/header-wrapper";
+import { SidebarProvider } from "@/components/layout/sidebar-context";
 
 const rubik = Rubik({
   variable: "--font-rubik",
@@ -31,7 +33,10 @@ export default function RootLayout({
     <html lang="pt-BR" suppressHydrationWarning>
       <body className={`${rubik.variable} ${geistMono.variable} antialiased`}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange>
-          {children}
+          <SidebarProvider>
+            <HeaderWrapper />
+            {children}
+          </SidebarProvider>
         </ThemeProvider>
       </body>
     </html>
