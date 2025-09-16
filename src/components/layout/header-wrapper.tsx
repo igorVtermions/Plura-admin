@@ -24,15 +24,11 @@ export default function HeaderWrapper() {
   const p = normalizePath(pathname);
   const hidePaths = [
     "/",
-    "/login",
     "/register",
-    "/auth",
-    "/auth/login",
-    "/auth/register",
     "/forgot-password",
     "/reset-password",
     "/password/reset",
-    "/recuperar-senha",
+    "/verify",
   ];
 
   const isAuthPath = hidePaths.some((path) => p === path || p.startsWith(path + "/"));

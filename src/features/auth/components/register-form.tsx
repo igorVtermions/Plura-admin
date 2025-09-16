@@ -1,11 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import api from "@/services/api";
+import axios from "axios";
+import { Eye, EyeClosed } from "lucide-react";
 
 function validatePassword(pw: string) {
   return {
@@ -22,16 +25,72 @@ export function RegisterForm() {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [pwFocused, setPwFocused] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const rules = useMemo(() => validatePassword(password), [password]);
   const allOk = Object.values(rules).every(Boolean);
   const match = confirm.length > 0 && confirm === password;
   const mismatch = confirm.length > 0 && confirm !== password;
 
-  function onSubmit(e: React.FormEvent) {
+  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setError(null);
     if (!allOk || !match) return;
-    router.push("/?success=registered");
+
+    const form = new FormData(e.currentTarget);
+    const name = String(form.get("name") ?? "").trim();
+    const email = String(form.get("email") ?? "").trim();
+    const pw = String(form.get("password") ?? "");
+    const confirmPassword = String(form.get("confirm_password") ?? "");
+
+    if (!name || !email || !pw || !confirmPassword) {
+      setError("Preencha todos os campos");
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const res = await api.post("/admin/register", {
+        name,
+        email,
+        password: pw,
+        confirmPassword,
+      });
+
+      const rawId = res.data?.id ?? res.data?.adminId ?? res.data?.admin?.id;
+      const adminId = rawId != null ? Number(rawId) : undefined;
+
+      try {
+        if (!Number.isNaN(adminId)) {
+          await api.post("/admin/pin/send", { adminId, via: "email" });
+        } else {
+          await api.post("/admin/pin/send", { email, via: "email" });
+        }
+      } catch {
+      }
+
+      const q = new URLSearchParams();
+      q.set("email", email);
+      if (!Number.isNaN(adminId)) q.set("adminId", String(adminId));
+      router.push(`/verify?${q.toString()}`);
+    } catch (err: unknown) {
+      let message = "Erro ao criar conta";
+      if (axios.isAxiosError(err)) {
+        const data = err.response?.data as { message?: string } | undefined;
+        message = data?.message ?? err.message ?? message;
+      } else if (err instanceof Error) {
+        message = err.message;
+      } else if (typeof err === "string") {
+        message = err;
+      }
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -40,26 +99,38 @@ export function RegisterForm() {
         <Label htmlFor="name">Nome</Label>
         <Input id="name" name="name" type="text" placeholder="Seu nome" autoComplete="name" required />
       </div>
+
       <div className="grid gap-2">
         <Label htmlFor="email">E-mail</Label>
-        <Input id="email" name="email" type="email" placeholder="E-mail"
-          autoComplete="email" required />
+        <Input id="email" name="email" type="email" placeholder="E-mail" autoComplete="email" required />
       </div>
+
       <div className="grid gap-2">
         <Label htmlFor="password">Senha</Label>
-        <Input
-          id="password"
-          name="password"
-          type="password"
-          autoComplete="new-password"
-          placeholder="Senha"
-          required
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          onFocus={() => setPwFocused(true)}
-          onBlur={() => setPwFocused(false)}
-          aria-describedby="password-help"
-        />
+        <div className="relative">
+          <Input
+            id="password"
+            name="password"
+            type={showPassword ? "text" : "password"}
+            autoComplete="new-password"
+            placeholder="Senha"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            onFocus={() => setPwFocused(true)}
+            onBlur={() => setPwFocused(false)}
+            aria-describedby="password-help"
+            className="pr-10"
+          />
+          <button
+            type="button"
+            aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+            onClick={() => setShowPassword((s) => !s)}
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-sm text-muted-foreground"
+          >
+            {showPassword ? <EyeClosed className="h-5 w-5" aria-hidden /> : <Eye className="h-5 w-5" aria-hidden />}
+          </button>
+        </div>
         {pwFocused && (
           <ul id="password-help" className="text-xs text-muted-foreground space-y-1">
             <li className={rules.length ? "text-green-600" : "text-red-600"}>• Mínimo 8 caracteres</li>
@@ -70,30 +141,46 @@ export function RegisterForm() {
           </ul>
         )}
       </div>
+
       <div className="grid gap-1.5">
         <Label htmlFor="confirm_password">Confirmar senha</Label>
-        <Input
-          id="confirm_password"
-          name="confirm_password"
-          type="password"
-          autoComplete="new-password"
-          placeholder="Confirmar senha"
-          required
-          value={confirm}
-          onChange={(e) => setConfirm(e.target.value)}
-          aria-describedby="confirm-help"
-        />
-        {mismatch && (
-          <p id="confirm-help" className="text-xs text-red-600">As senhas não coincidem</p>
-        )}
-        {!mismatch && match && (
-          <p id="confirm-help" className="text-xs text-green-600">As senhas coincidem</p>
-        )}
+        <div className="relative">
+          <Input
+            id="confirm_password"
+            name="confirm_password"
+            type={showConfirm ? "text" : "password"}
+            autoComplete="new-password"
+            placeholder="Confirmar senha"
+            required
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+            aria-describedby="confirm-help"
+            className="pr-10"
+          />
+          <button
+            type="button"
+            aria-label={showConfirm ? "Ocultar confirmação" : "Mostrar confirmação"}
+            onClick={() => setShowConfirm((s) => !s)}
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-sm text-muted-foreground"
+          >
+            {showConfirm ? <EyeClosed className="h-5 w-5" aria-hidden /> : <Eye className="h-5 w-5" aria-hidden />}
+          </button>
+        </div>
+        {mismatch && <p id="confirm-help" className="text-xs text-red-600">As senhas não coincidem</p>}
+        {!mismatch && match && <p id="confirm-help" className="text-xs text-green-600">As senhas coincidem</p>}
       </div>
-      <Button type="submit" className="w-full">Criar conta</Button>
+
+      {error && <div className="text-sm text-red-600">{error}</div>}
+
+      <Button type="submit" className="w-full" disabled={loading}>
+        {loading ? "Criando..." : "Criar conta"}
+      </Button>
+
       <p className="text-sm text-muted-foreground text-center">
         Já tem conta? <Link href="/" className="text-primary hover:underline">Entrar</Link>
       </p>
     </form>
   );
 }
+
+export default RegisterForm;
