@@ -1,15 +1,53 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import api from "@/services/api";
+import Notifications from "./Notifications";
 
 type HeaderProps = {
   adminName?: string;
-  hasNotifications?: boolean;
 };
 
-export function Header({ adminName = "Admin", hasNotifications = false }: HeaderProps) {
+export function Header({ adminName = "Admin" }: HeaderProps) {
+  const router = useRouter();
+  const [name, setName] = useState<string | null>(null);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [logoutLoading, setLogoutLoading] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function fetchMe() {
+      try {
+        const res = await api.get("/admin/me");
+        const admin = res.data?.admin ?? res.data ?? {};
+        const display = admin?.name ?? admin?.fullName ?? admin?.username ?? admin?.email ?? "Administrador";
+        if (mounted) setName(String(display));
+      } catch {
+      }
+    }
+
+    fetchMe();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  async function handleLogoutConfirm() {
+    setLogoutLoading(true);
+    try {
+      await api.post("/admin/logout");
+    } catch {
+    } finally {
+      setLogoutLoading(false);
+      router.push("/");
+    }
+  }
+
   const headerStyle: React.CSSProperties & Record<string, string | number> = {
     borderBottomColor: "#E2E8F8",
     background: "#FCFDFF",
@@ -28,45 +66,22 @@ export function Header({ adminName = "Admin", hasNotifications = false }: Header
           <div className="leading-none">
             <div
               className="font-medium"
-              style={{ color: "#6B4DB8", fontFamily: "var(--font-rubik)", fontSize: 20, lineHeight: "26px" }}
+              style={{ color: "#6B4DB8", fontFamily: "var(--font-rubik)", fontSize: 18, lineHeight: "24px" }}
             >
-              Olá, {adminName}!
+              Olá, {name ?? adminName}!
             </div>
-            <div className="text-xs" style={{ lineHeight: "18px", fontSize: 14, color: "#6B4DB8" }}>
+            <div className="text-xs" style={{ lineHeight: "18px", fontSize: 12, color: "#6B4DB8" }}>
               Seja bem-vindo(a)!
             </div>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
+          <Notifications />
           <button
             type="button"
-            className="relative flex w-12 h-12 p-3 items-center justify-center rounded-lg cursor-pointer"
-            style={{ border: "1px solid #D0D9F1", background: "#FFFFFF", color: "#191F33" }}
-            aria-label="Notificações"
-          >
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
-              <path d="M7.5 17.5H12.5" stroke="#191F33" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M4.37515 8.125C4.37515 6.63316 4.96778 5.20242 6.02267 4.14752C7.07756 3.09263 8.5083 2.5 10.0001 2.5C11.492 2.5 12.9227 3.09263 13.9776 4.14752C15.0325 5.20242 15.6251 6.63316 15.6251 8.125C15.6251 10.9234 16.2736 13.1719 16.7892 14.0625C16.844 14.1574 16.8728 14.2649 16.8729 14.3745C16.873 14.484 16.8444 14.5916 16.7898 14.6865C16.7352 14.7815 16.6566 14.8604 16.5619 14.9154C16.4672 14.9705 16.3597 14.9996 16.2501 15H3.75015C3.64076 14.9993 3.53345 14.97 3.43896 14.9149C3.34448 14.8597 3.26611 14.7808 3.2117 14.6859C3.15729 14.591 3.12874 14.4835 3.12891 14.3741C3.12907 14.2647 3.15795 14.1572 3.21265 14.0625C3.72749 13.1719 4.37515 10.9227 4.37515 8.125Z" stroke="#191F33" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-
-            {hasNotifications ? (
-              <span
-                className="absolute right-2 top-2 block h-2 w-2 rounded-full"
-                style={{ background: "#FF4D4F" }}
-              />
-            ) : (
-              <span
-                className="absolute right-2 top-2 block h-2 w-2 rounded-full"
-                style={{ background: "#FFFFFF" }}
-                aria-hidden
-              />
-            )}
-          </button>
-
-          <button
-            type="button"
-            className="flex w-12 h-12 p-3 items-center justify-center rounded-lg cursor-pointer"
+            onClick={() => setShowLogoutModal(true)}
+            className="flex w-10 h-10 p-2 items-center justify-center rounded-lg cursor-pointer"
             style={{ border: "1px solid #D0D9F1", background: "#FFFFFF" }}
             aria-label="Sair"
           >
@@ -74,6 +89,47 @@ export function Header({ adminName = "Admin", hasNotifications = false }: Header
           </button>
         </div>
       </div>
+
+      {showLogoutModal && (
+        <div
+          className="fixed inset-0 z-60 flex items-center justify-center"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Confirmar logout"
+        >
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => !logoutLoading && setShowLogoutModal(false)}
+            aria-hidden="true"
+          />
+          <div className="relative bg-white rounded-lg shadow-lg w-full max-w-sm mx-4 p-6" style={{ zIndex: 70 }}>
+            <h3 className="text-base font-semibold mb-1 text-center">Tem certeza que deseja sair?</h3>
+            <p className="text-sm text-muted-foreground mb-4 text-center">
+              Ao sair será necessário entrar novamente para acessar a conta.
+            </p>
+
+            <div className="mt-2 flex flex-row gap-3">
+              <button
+                type="button"
+                onClick={() => setShowLogoutModal(false)}
+                disabled={logoutLoading}
+                className="w-full px-4 py-2 rounded-md bg-gray-100 text-sm text-gray-800 hover:bg-gray-200"
+              >
+                Cancelar
+              </button>
+
+              <Button
+                type="button"
+                onClick={handleLogoutConfirm}
+                disabled={logoutLoading}
+                className="w-full bg-red-600 hover:bg-red-700 text-white"
+              >
+                {logoutLoading ? "Saindo..." : "Sair"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 }

@@ -4,6 +4,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import HeaderWrapper from "@/components/layout/header-wrapper";
 import { SidebarProvider } from "@/components/layout/sidebar-context";
+import { Toaster } from "react-hot-toast";
 
 const rubik = Rubik({
   variable: "--font-rubik",
@@ -35,6 +36,7 @@ export default function RootLayout({
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange>
           <SidebarProvider>
             <HeaderWrapper />
+            <Toaster position="top-right" toastOptions={{ duration: 4000 }} />
             {children}
           </SidebarProvider>
         </ThemeProvider>
