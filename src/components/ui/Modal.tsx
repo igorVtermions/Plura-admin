@@ -44,11 +44,18 @@ export default function Modal({
           <div className="flex items-center justify-between px-6 py-3 max-w-5xl mx-auto">
             <div>
               {title && (
-                <div className="text-lg font-semibold" style={{ color: "#1F2A44" }}>
+                <div
+                  className="text-[20px] font-medium"
+                  style={{ color: "#191F33" }}
+                >
                   {title}
                 </div>
               )}
-              {subtitle && <div className="text-sm text-muted-foreground">{subtitle}</div>}
+              {subtitle && (
+                <div className="text-[16px] font-normal" style={{ color: "#5A6480" }}>
+                  {subtitle}
+                </div>
+              )}
             </div>
             <button
               type="button"
@@ -63,8 +70,8 @@ export default function Modal({
         </div>
         <div style={{ background: "#FFFFFF" }}>
           <div
-            className="max-w-5xl mx-auto px-6 py-6"
-            style={{ maxHeight: "calc(100vh - 180px)", overflowY: "auto" }}
+            className="max-w-5xl mx-auto px-6 py-6 overflow-x-hidden"
+            style={{ maxHeight: "calc(100vh - 180px)", overflowY: "auto", overscrollBehaviorX: "contain" }}
           >
             {children}
           </div>

@@ -5,9 +5,11 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { RoomsControl } from "@/features/home/components/rooms-control";
 import React, { useState } from "react";
 import CreateInstructorModal from "@/components/instructor/CreateInstructorModal";
+import CreateSessionModal from "@/components/session/CreateSessionModal";
 
 export default function HomePage() {
   const [openCreateInstructor, setOpenCreateInstructor] = useState(false);
+  const [openCreateSession, setOpenCreateSession] = useState(false);
 
   function handleOpenCreate() {
     setOpenCreateInstructor(true);
@@ -17,6 +19,15 @@ export default function HomePage() {
   }
   function handleContinueCreate(payload: Record<string, unknown> | null) {
     setOpenCreateInstructor(false);
+  }
+  function handleOpenCreateSession() {
+    setOpenCreateSession(true);
+  }
+  function handleCloseCreateSession() {
+    setOpenCreateSession(false);
+  }
+  function handleContinueCreateSession(payload: Record<string, unknown> | null) {
+    setOpenCreateSession(false);
   }
 
   return (
@@ -38,6 +49,7 @@ export default function HomePage() {
                 <div className="flex flex-col sm:flex-row gap-3">
                   <button
                     type="button"
+                    onClick={handleOpenCreateSession}
                     className="rounded-md flex flex-col justify-center items-start gap-3 p-5 w-full flex-1 min-w-0 bg-[#F7F9FF] cursor-pointer transition-transform duration-150 ease-in-out hover:-translate-y-1 hover:scale-[1.02] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-[#977CEC]"
                     style={{ border: "1px solid #D4C7FF" }}
                   >
@@ -91,6 +103,11 @@ export default function HomePage() {
         onContinue={handleContinueCreate}
         currentStep={1}
         totalSteps={7}
+      />
+      <CreateSessionModal
+        open={openCreateSession}
+        onClose={handleCloseCreateSession}
+        onContinue={handleContinueCreateSession}
       />
     </div>
   );
