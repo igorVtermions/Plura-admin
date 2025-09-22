@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 
 type SoonRoomCardProps = {
   dateLabel?: string;
@@ -60,11 +61,7 @@ function CalendarIcon({ color = "#BE6100", size = 20 }: { color?: string; size?:
 
 function ClockWaitingIcon({ color = "#BE6100", size = 20 }: { color?: string; size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
-      <circle cx="12" cy="12" r="9" stroke={color} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M12 7v6l3 2" stroke={color} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M18 6l3-3" stroke={color} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" opacity="0.9" />
-    </svg>
+    <Image src="/ClockWainting.svg" alt="Clock waiting" width={20} height={20} className="object-contain" />
   );
 }
 function BellInline({

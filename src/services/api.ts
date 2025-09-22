@@ -11,12 +11,13 @@ api.interceptors.request.use((config) => {
   try {
     if (typeof window !== "undefined") {
       const token = localStorage.getItem("token");
-      if (token && config.headers) {
+      const url = String(config.url ?? "");
+      const isAuthFree = /\/(admin|users)\/login\b/.test(url);
+      if (!isAuthFree && token && config.headers) {
         config.headers.Authorization = `Bearer ${token}`;
       }
     }
   } catch {
-    // ignore
   }
   return config;
 });

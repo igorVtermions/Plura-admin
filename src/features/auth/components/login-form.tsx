@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState } from "react";
 import { Eye, EyeClosed } from "lucide-react";
@@ -31,6 +31,7 @@ export function LoginForm() {
 
     try {
       setLoading(true);
+      try { setClientToken(null); } catch {}
       const res = await api.post("/admin/login", { email, password });
 
       const token = res.data?.token ?? res.data?.accessToken ?? null;

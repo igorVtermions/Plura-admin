@@ -20,6 +20,8 @@ const items: Item[] = [
 export function Sidebar() {
   const pathname = usePathname();
   const { open, toggleSidebar, closeSidebar } = useSidebar();
+  const MOBILE_BAR_HEIGHT = 80;
+  const MOBILE_GAP = 8;
 
   const navVertical = (
     <nav className="flex flex-col items-center gap-6">
@@ -91,14 +93,24 @@ export function Sidebar() {
       </aside>
 
       <div className="md:hidden">
-        <div className="fixed left-0 right-0 flex justify-center" style={{ top: "calc(var(--header-height, 96px) - 18px)", zIndex: 40 }}>
+        <div
+          className="fixed left-0 right-0 flex justify-center"
+          style={{
+            top: open
+              ? `calc(var(--header-height, 96px) + ${MOBILE_GAP}px + ${MOBILE_BAR_HEIGHT}px - 12px)`
+              : `calc(var(--header-height, 96px) + ${MOBILE_GAP}px - 8px)`,
+            zIndex: 60,
+            pointerEvents: "none",
+            transition: "top 200ms ease",
+          }}
+        >
           <button
             type="button"
             onClick={() => toggleSidebar()}
             aria-expanded={open}
             aria-label={open ? "Fechar menu" : "Abrir menu"}
-            className="flex items-center justify-center rounded-full w-9 h-9 cursor-pointer pointer-events-auto"
-            style={{ border: "1px solid #E2E8F8", background: "#FFFFFF" }}
+            className="flex items-center justify-center rounded-full w-8 h-8 cursor-pointer pointer-events-auto"
+            style={{ background: "#FFFFFF", border: "1px solid #E2E8F8" }}
           >
             <svg
               width="18"
@@ -117,13 +129,13 @@ export function Sidebar() {
         <div
           className="fixed left-0 right-0 transition-transform duration-300 ease-in-out"
           style={{
-            top: "var(--header-height, 96px)",
+            top: `calc(var(--header-height, 96px) + ${MOBILE_GAP}px)`,
             transform: open ? "translateY(0)" : "translateY(-100%)",
             pointerEvents: open ? "auto" : "none",
             zIndex: 40,
           }}
         >
-          <div className="bg-white border-b border-t border-[#E2E8F8] py-3 px-4 shadow-sm">
+          <div className="bg-white border-b border-t border-[#E2E8F8] px-4 shadow-sm h-20 flex items-center justify-center">
             {navHorizontal}
           </div>
         </div>

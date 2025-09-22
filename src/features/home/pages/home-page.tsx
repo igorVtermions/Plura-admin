@@ -31,11 +31,11 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen flex bg-white">
+    <div className="flex-1 flex bg-white min-h-0">
       <Sidebar />
-      <div className="flex-1 flex flex-col">
-        <main className="p-8">
-          <div className="max-w-5xl mx-auto w-full">
+      <div className="flex-1 flex flex-col min-w-0 min-h-0">
+        <main className="p-8 flex-1 overflow-auto md:overflow-auto min-h-0">
+          <div className="max-w-5xl mx-auto w-full min-h-0">
             <h1
               className="text-[32px] mb-6"
               style={{ fontFamily: "var(--font-rubik)" }}
@@ -93,9 +93,9 @@ export default function HomePage() {
               </section>
             </div>
             <RoomsControl />
-          </div>
-        </main>
-      </div>
+           </div>
+         </main>
+       </div>
 
       <CreateInstructorModal
         open={openCreateInstructor}
