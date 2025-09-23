@@ -1,6 +1,6 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
+import { useSearchParams } from "@/lib/router";
 
 const messages: Record<string, string> = {
   registered: "Conta criada com sucesso. Faça login para continuar.",
@@ -20,4 +20,3 @@ export function SuccessBanner() {
     </div>
   );
 }
-

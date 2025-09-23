@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import Link from "@/components/router/Link";
+import { usePathname } from "@/lib/router";
 import { useState } from "react";
 
 const items = [

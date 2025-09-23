@@ -1,7 +1,6 @@
-"use client";
+﻿"use client";
 
-import Image from "next/image";
-import { Sidebar } from "@/components/layout/sidebar";
+import Image from "@/components/ui/Image";
 import { RoomsControl } from "@/features/home/components/rooms-control";
 import React, { useState } from "react";
 import CreateInstructorModal from "@/components/instructor/CreateInstructorModal";
@@ -31,11 +30,8 @@ export default function HomePage() {
   }
 
   return (
-    <div className="flex-1 flex bg-white min-h-0">
-      <Sidebar />
-      <div className="flex-1 flex flex-col min-w-0 min-h-0">
-        <main className="p-8 flex-1 overflow-auto md:overflow-auto min-h-0">
-          <div className="max-w-5xl mx-auto w-full min-h-0">
+    <main className="p-8 flex-1 overflow-auto md:overflow-auto min-h-0 bg-white">
+      <div className="max-w-5xl mx-auto w-full min-h-0">
             <h1
               className="text-[32px] mb-6"
               style={{ fontFamily: "var(--font-rubik)" }}
@@ -93,10 +89,8 @@ export default function HomePage() {
               </section>
             </div>
             <RoomsControl />
-           </div>
-         </main>
-       </div>
-
+          </div>
+        
       <CreateInstructorModal
         open={openCreateInstructor}
         onClose={handleCloseCreate}
@@ -109,6 +103,9 @@ export default function HomePage() {
         onClose={handleCloseCreateSession}
         onContinue={handleContinueCreateSession}
       />
-    </div>
+    </main>
   );
 }
+
+
+

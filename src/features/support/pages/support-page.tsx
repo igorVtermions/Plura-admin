@@ -1,9 +1,8 @@
-"use client";
+﻿"use client";
 
-import Image from "next/image";
-import Link from "next/link";
+import Image from "@/components/ui/Image";
+import Link from "@/components/router/Link";
 import React from "react";
-import { Sidebar } from "@/components/layout/sidebar";
 
 export default function SupportPage() {
   const denuncias = 0;
@@ -38,11 +37,8 @@ export default function SupportPage() {
   }, [page]);
 
   return (
-    <div className="flex-1 flex bg-white min-h-0">
-      <Sidebar />
-      <div className="flex-1 flex flex-col min-w-0 min-h-0">
-        <main className="p-8 flex-1 overflow-auto md:overflow-auto min-h-0">
-          <div className="max-w-5xl mx-auto w-full min-h-0">
+    <main className="p-8 flex-1 overflow-auto md:overflow-auto min-h-0 bg-white">
+      <div className="max-w-5xl mx-auto w-full min-h-0">
             <h1
               className="text-[32px] mb-6"
               style={{ fontFamily: "var(--font-rubik)" }}
@@ -70,7 +66,7 @@ export default function SupportPage() {
                   />
                   <span className="text-[16px] font-medium text-[#191F33]">Denúncia</span>
                   <span className="text-sm text-[#191F33]">
-                    {denuncias > 0 ? `${denuncias} denúncia${denuncias > 1 ? "s" : ""}` : "Nenhuma denúncia"}
+                    {denuncias > 0 ? `${denuncias} Denúncia${denuncias > 1 ? "s" : ""}` : "Nenhuma Denúncia"}
                   </span>
                 </button>
 
@@ -194,7 +190,7 @@ export default function SupportPage() {
                 </div>
                 <button
                   type="button"
-                  aria-label="Próxima página"
+                  aria-label="Próxima Página"
                   onClick={() => goPage(page + 1)}
                   disabled={page === totalPages}
                   className="px-3 py-2 rounded-md border bg-white flex items-center justify-center cursor-pointer"
@@ -250,7 +246,7 @@ export default function SupportPage() {
 
                     <button
                       type="button"
-                      aria-label="Próxima página"
+                      aria-label="Próxima Página"
                       onClick={() => goPage(page + 1)}
                       disabled={page === totalPages}
                       className="px-3 py-2 rounded-md border bg-white flex items-center justify-center cursor-pointer"
@@ -262,8 +258,8 @@ export default function SupportPage() {
                 </div>
             </section>
           </div>
-        </main>
-      </div>
-    </div>
+    </main>
   );
 }
+
+

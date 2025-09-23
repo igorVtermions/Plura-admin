@@ -1,8 +1,8 @@
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+﻿import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Logo } from "@/components/brand/logo";
 import { LoginForm } from "@/features/auth/components/login-form";
 import { SuccessBanner } from "@/components/feedback/success-banner";
-import Link from "next/link";
+import Link from "@/components/router/Link";
 
 export default function LoginPage() {
   return (
@@ -29,3 +29,6 @@ export default function LoginPage() {
     </main>
   );
 }
+
+
+

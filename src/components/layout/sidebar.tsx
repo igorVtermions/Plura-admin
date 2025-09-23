@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import Link from "@/components/router/Link";
+import { usePathname } from "@/lib/router";
 import { useSidebar } from "./sidebar-context";
 
 type Item = {
@@ -143,3 +143,7 @@ export function Sidebar() {
     </>
   );
 }
+
+
+
+

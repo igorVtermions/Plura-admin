@@ -1,34 +1,50 @@
 Plura Talks - Administrador
 
-Base inicial do painel administrativo construída com Next.js (App Router), TypeScript, Tailwind CSS v4 e componentes no padrão shadcn.
+Base do painel administrativo em React + Vite, TypeScript, Tailwind CSS v4 e componentes no padrão shadcn.
 
 ## Scripts
 
 Disponíveis via npm:
 
 ```bash
-npm run dev       # ambiente de desenvolvimento
-npm run build     # build de produção
-npm start         # servir build de produção
-npm run lint      # lint
-npm run lint:fix  # lint com correção
-npm run format    # formatar com Prettier
+npm run dev      # ambiente de desenvolvimento (Vite)
+npm run build    # build de produção (gera dist/)
+npm run preview  # servir o build localmente
 ```
 
-Abra [http://localhost:3000](http://localhost:3000) no navegador para ver o resultado.
-
-Ponto de entrada da UI em `src/app/page.tsx`.
-
-Este projeto usa [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) para otimizar o carregamento das fontes Geist.
+Abra http://localhost:5173 no navegador para ver o resultado em desenvolvimento.
 
 ## Estrutura
 
 Pastas principais:
 
-- `src/components/ui`: componentes base (ex.: Button)
-- `src/lib`: utilitários (ex.: `cn`)
-- `src/app`: rotas App Router e layouts
+- `src/App.tsx`: rotas com React Router e layout principal
+- `src/main.tsx`: bootstrap da aplicação
+- `src/components`: componentes compartilhados (layout, ui, etc.)
+- `src/features`: páginas e módulos por domínio (auth, home, support, ...)
+- `public/`: assets estáticos (favicons, svgs)
+
+Aliases de importação:
+
+- `@/*` aponta para `src/*` (configurado em `vite.config.ts` e `tsconfig.json`).
+
+## Estilos
+
+- Tailwind CSS v4 com PostCSS (ver `postcss.config.js`).
+- Estilos globais em `src/app/globals.css`.
+
+## Variáveis de ambiente
+
+- Use o prefixo `VITE_` para expor ao front-end.
+- Exemplo: `VITE_API_URL` consumida em `src/services/api.ts`.
+- Crie um `.env` na raiz (ex.: `VITE_API_URL=https://...`).
+
+## Favicon
+
+- O favicon utilizado é `public/favicon.ico` (referenciado em `index.html`).
 
 ## Deploy
 
-Pode ser feito via Vercel ou infraestrutura própria. Consulte a documentação do Next.js para detalhes de deploy em produção.
+- Build: `npm ci && npm run build` → saída em `dist/`.
+- Qualquer serviço de estáticos (incluindo Lovable) pode servir a pasta `dist/`.
+

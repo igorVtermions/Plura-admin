@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 
 import React from "react";
-import Image from "next/image";
+import Image from "@/components/ui/Image";
 
 type SoonRoomCardProps = {
   dateLabel?: string;
@@ -144,3 +144,5 @@ export function SoonRoomCard({
     </article>
   );
 }
+
+

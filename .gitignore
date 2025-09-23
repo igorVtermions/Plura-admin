@@ -13,9 +13,10 @@
 # testing
 /coverage
 
-# next.js
-/.next/
-/out/
+# build (Vite)
+/dist/
+.vite/
+.eslintcache
 
 # production
 /build
@@ -33,9 +34,10 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
-# vercel
-.vercel
+# tools
+.vercel/
+.idea/
+.vscode/
 
 # typescript
 *.tsbuildinfo
-next-env.d.ts

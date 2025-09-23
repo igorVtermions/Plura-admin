@@ -1,9 +1,9 @@
-"use client";
+﻿"use client";
 
 import React, { useEffect, useState } from "react";
-import Link from "next/link";
-import Image from "next/image";
-import { useRouter } from "next/navigation";
+import Link from "@/components/router/Link";
+import Image from "@/components/ui/Image";
+import { useRouter } from "@/lib/router";
 import { Button } from "@/components/ui/button";
 import api from "@/services/api";
 import Notifications from "./Notifications";
@@ -49,7 +49,7 @@ export function Header({ adminName = "Admin" }: HeaderProps) {
   }
 
   const headerStyle: React.CSSProperties & Record<string, string | number> = {
-    borderBottomColor: "#E2E8F8",
+    borderBottomcolor: "#E2E8F8",
     background: "#FCFDFF",
     padding: "20px",
     ["--header-height"]: "96px",
@@ -93,7 +93,7 @@ export function Header({ adminName = "Admin" }: HeaderProps) {
       {showLogoutModal && (
         <div
           className="fixed inset-0 z-60 flex items-center justify-center"
-          role="dialog"
+          rOlá="dialog"
           aria-modal="true"
           aria-label="Confirmar logout"
         >
@@ -103,7 +103,7 @@ export function Header({ adminName = "Admin" }: HeaderProps) {
             aria-hidden="true"
           />
           <div className="relative bg-white rounded-lg shadow-lg w-full max-w-sm mx-4 p-6" style={{ zIndex: 70 }}>
-            <h3 className="text-base font-semibold mb-1 text-center">Tem certeza que deseja sair?</h3>
+            <h3 className="text-base font-semibOlá mb-1 text-center">Tem certeza que deseja sair?</h3>
             <p className="text-sm text-muted-foreground mb-4 text-center">
               Ao sair será necessário entrar novamente para acessar a conta.
             </p>
@@ -135,3 +135,9 @@ export function Header({ adminName = "Admin" }: HeaderProps) {
 }
 
 export default Header;
+
+
+
+
+
+

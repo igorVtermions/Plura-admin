@@ -1,7 +1,7 @@
-"use client";
+ï»¿"use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import Image from "next/image";
+import Image from "@/components/ui/Image";
 import { LiveRoomCard } from "./live-room-card";
 import { SoonRoomCard } from "./soon-room-card";
 import api from "@/services/api";
@@ -200,7 +200,7 @@ export function RoomsControl() {
       <div className="flex items-center justify-center flex-shrink-0 mt-auto md:hidden" style={{ marginBottom: 0 }}>
         <button
           type="button"
-          aria-label="Página anterior"
+          aria-label="PÃ¡gina anterior"
           onClick={() => goPage(page - 1)}
           disabled={page === 1}
           className="px-3 py-2 rounded-md border bg-white flex items-center justify-center cursor-pointer"
@@ -246,13 +246,13 @@ export function RoomsControl() {
         </div>
         <button
           type="button"
-          aria-label="Próxima página"
+          aria-label="PrÃ³xima pÃ¡gina"
           onClick={() => goPage(page + 1)}
           disabled={page === totalPages}
           className="px-3 py-2 rounded-md border bg-white flex items-center justify-center cursor-pointer"
           style={{ borderColor: '#D0D9F1', color: page === totalPages ? '#7682A5' : '#191F33', opacity: page === totalPages ? 0.5 : 1 }}
         >
-          <Image src="/Arrow.svg" alt="Próxima" width={13} height={13} className="object-contain rotate-180" />
+          <Image src="/Arrow.svg" alt="PrÃ³xima" width={13} height={13} className="object-contain rotate-180" />
         </button>
       </div>
       <div className="hidden md:flex fixed left-1/2 transform -translate-x-1/2 bottom-4 z-50 w-full max-w-5xl px-8 pointer-events-auto">
@@ -260,7 +260,7 @@ export function RoomsControl() {
           <div className="bg-transparent p-0 flex items-center justify-center">
             <button
               type="button"
-              aria-label="Página anterior"
+              aria-label="PÃ¡gina anterior"
               onClick={() => goPage(page - 1)}
               disabled={page === 1}
               className="px-3 py-2 rounded-md border bg-white flex items-center justify-center cursor-pointer"
@@ -308,13 +308,13 @@ export function RoomsControl() {
 
             <button
               type="button"
-              aria-label="Próxima página"
+              aria-label="PrÃ³xima pÃ¡gina"
               onClick={() => goPage(page + 1)}
               disabled={page === totalPages}
               className="px-3 py-2 rounded-md border bg-white flex items-center justify-center cursor-pointer"
               style={{ borderColor: '#D0D9F1', color: page === totalPages ? '#7682A5' : '#191F33', opacity: page === totalPages ? 0.5 : 1 }}
             >
-              <Image src="/Arrow.svg" alt="Próxima" width={13} height={13} className="object-contain rotate-180" />
+              <Image src="/Arrow.svg" alt="PrÃ³xima" width={13} height={13} className="object-contain rotate-180" />
             </button>
           </div>
         </div>

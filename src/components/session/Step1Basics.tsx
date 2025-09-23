@@ -1,9 +1,9 @@
-"use client";
+﻿"use client";
 
 import React from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import Image from "next/image";
+import Image from "@/components/ui/Image";
 import { X, ChevronDown } from "lucide-react";
 
 export type Tutor = { id: string | number; name: string };
@@ -62,7 +62,7 @@ export default function Step1Basics(props: Props, ref: React.ForwardedRef<HTMLDi
       <div className="grid grid-cols-1 gap-4">
         <div>
           <Label htmlFor="session-title">Título da sala</Label>
-          <Input id="session-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Insira o título da sala" className="focus:outline-none focus:ring-0 focus:border-[#977CEC]" />
+          <Input id="session-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Insira o Título da sala" className="focus:outline-none focus:ring-0 focus:border-[#977CEC]" />
         </div>
 
         <div className="grid grid-cols-1 gap-4 px-1">
@@ -141,4 +141,6 @@ export default function Step1Basics(props: Props, ref: React.ForwardedRef<HTMLDi
 }
 
 export const ForwardedStep1Basics = React.forwardRef<HTMLDivElement, Props>(Step1Basics);
+
+
 

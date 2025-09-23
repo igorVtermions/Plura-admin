@@ -1,7 +1,6 @@
-"use client";
+﻿"use client";
 
-import React from "react";
-import Image from "next/image";
+import Image from "@/components/ui/Image";
 
 type User = {
   id?: string | number;
@@ -121,3 +120,5 @@ export function LiveRoomCard({
     </article>
   );
 }
+
+
