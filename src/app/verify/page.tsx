@@ -4,22 +4,28 @@ import { VerifyPinForm } from "@/features/auth/components/verify-pin-form";
 export const metadata = { title: "Verificar conta | Plura Talks - Administrador" };
 
 export default function Page({ searchParams }: { searchParams?: { email?: string; adminId?: string } }) {
-  // Estado local para suportar tanto Next (searchParams) quanto SPA (window.location.search)
-  const [clientEmail, setClientEmail] = useState<string | undefined>(() =>
-    typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("email") ?? undefined : searchParams?.email
-  );
-  const [clientAdminId, setClientAdminId] = useState<string | undefined>(() =>
-    typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("adminId") ?? undefined : searchParams?.adminId
-  );
+  const [clientEmail, setClientEmail] = useState<string | undefined>(() => {
+    if (typeof window !== "undefined") {
+      const sp = new URLSearchParams(window.location.search);
+      return sp.get("email") ?? undefined;
+    }
+    return searchParams?.email;
+  });
 
-  // No client, atualiza caso a URL tenha sido alterada pelo router
+  const [clientAdminId, setClientAdminId] = useState<string | undefined>(() => {
+    if (typeof window !== "undefined") {
+      const sp = new URLSearchParams(window.location.search);
+      return sp.get("adminId") ?? undefined;
+    }
+    return searchParams?.adminId;
+  });
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     const sp = new URLSearchParams(window.location.search);
     setClientEmail(sp.get("email") ?? searchParams?.email);
     setClientAdminId(sp.get("adminId") ?? searchParams?.adminId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [searchParams?.email, searchParams?.adminId]);
 
   const email = clientEmail ?? "";
   const adminId = clientAdminId ?? undefined;

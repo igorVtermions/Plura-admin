@@ -1,5 +1,6 @@
 import React from "react";
 import ForgotPasswordForm from "@/features/auth/components/forgot-password-form";
+import UsersPage from "@/features/users/pages/users-page";
 
 export const metadata = { title: "Recuperar senha | Plura Talks - Administrador" };
 

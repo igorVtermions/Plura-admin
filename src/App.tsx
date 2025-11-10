@@ -13,6 +13,7 @@ import ForgotPasswordPage from '@/app/forgot-password/page'
 import ResetPasswordPage from '@/app/reset-password/page'
 import VerifyPage from '@/app/verify/page'
 import LoginPage from '@/features/auth/pages/login-page'
+import UsersPage from '@/features/users/pages/users-page'
 
 export default function App() {
   const { pathname } = useLocation()
@@ -36,6 +37,7 @@ export default function App() {
                 <Route path="/forgot-password" element={<ForgotPasswordPage />} />
                 <Route path="/reset-password" element={<ResetPasswordPage />} />
                 <Route path="/verify" element={<VerifyPage />} />
+                <Route path="/users" element={<UsersPage />} />
                 <Route path="*" element={<div className="p-6"><NotFoundPage /></div>} />
               </Routes>
             </main>
