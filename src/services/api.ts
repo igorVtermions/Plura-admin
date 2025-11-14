@@ -1,6 +1,8 @@
 import axios from "axios";
 
-const API_BASE = import.meta.env.VITE_API_URL ?? "https://p1tct9i4re.execute-api.sa-east-1.amazonaws.com/api";
+const API_BASE =
+  import.meta.env.VITE_API_URL ??
+  "https://p1tct9i4re.execute-api.sa-east-1.amazonaws.com/api";
 
 const api = axios.create({
   baseURL: API_BASE,
@@ -18,18 +20,19 @@ api.interceptors.request.use((config) => {
       }
     }
   } catch {
+    // ignora
   }
   return config;
 });
 
 api.interceptors.response.use(
-  (r) => r,
-  (err) => {
-    if (err?.response?.status === 401 && typeof window !== "undefined") {
+  (response) => response,
+  (error) => {
+    if (error?.response?.status === 401 && typeof window !== "undefined") {
       localStorage.removeItem("token");
       location.assign("/");
     }
-    return Promise.reject(err);
+    return Promise.reject(error);
   }
 );
 

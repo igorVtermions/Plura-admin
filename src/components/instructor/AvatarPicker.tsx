@@ -1,29 +1,63 @@
 ﻿"use client";
 
-import React, { useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Image from "@/components/ui/Image";
 
 type Props = {
   file: File | null;
   onChange: (f: File | null) => void;
   ariaLabel?: string;
+  initialImageUrl?: string | null;
 };
 
-export default function AvatarPicker({ file, onChange, ariaLabel = "Alterar foto" }: Props) {
+export default function AvatarPicker({
+  file,
+  onChange,
+  ariaLabel = "Alterar foto",
+  initialImageUrl = null,
+}: Props) {
   const fileRef = useRef<HTMLInputElement | null>(null);
-  const avatarPreview = file ? URL.createObjectURL(file) : null;
+  const [objectUrl, setObjectUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    let nextUrl: string | null = null;
+
+    if (file) {
+      nextUrl = URL.createObjectURL(file);
+      setObjectUrl((previous) => {
+        if (previous) URL.revokeObjectURL(previous);
+        return nextUrl;
+      });
+    } else {
+      setObjectUrl((previous) => {
+        if (previous) URL.revokeObjectURL(previous);
+        return null;
+      });
+    }
+
+    return () => {
+      if (nextUrl) URL.revokeObjectURL(nextUrl);
+    };
+  }, [file]);
+
+  const fallbackImage =
+    typeof initialImageUrl === "string" && initialImageUrl.trim().length > 0
+      ? initialImageUrl
+      : null;
+  const avatarPreview = objectUrl ?? fallbackImage;
 
   function pickFile() {
     fileRef.current?.click();
   }
 
-  function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const f = e.target.files?.[0] ?? null;
-    onChange(f);
+  function onFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const selectedFile = event.target.files?.[0] ?? null;
+    onChange(selectedFile);
+    event.target.value = "";
   }
 
   return (
-    <div className="w-full flex justify-center">
+    <div className="flex w-full justify-center">
       <div className="relative">
         <div
           className="flex items-center justify-center rounded-full"
@@ -36,9 +70,13 @@ export default function AvatarPicker({ file, onChange, ariaLabel = "Alterar foto
           }}
         >
           {avatarPreview ? (
-            <img src={avatarPreview} alt="avatar" className="w-24 h-24 rounded-full object-cover" />
+            <img
+              src={avatarPreview}
+              alt="avatar"
+              className="h-24 w-24 rounded-full object-cover"
+            />
           ) : (
-            <div className="w-24 h-24 flex items-center justify-center">
+            <div className="flex h-24 w-24 items-center justify-center">
               <Image src="/User.svg" alt="User" width={48} height={48} />
             </div>
           )}
@@ -48,8 +86,7 @@ export default function AvatarPicker({ file, onChange, ariaLabel = "Alterar foto
           type="button"
           onClick={pickFile}
           aria-label={ariaLabel}
-          className="absolute left-1/2 bottom-2 transform -translate-x-1/2 translate-y-0 flex items-center justify-center cursor-pointer transition-transform duration-150 ease-in-out"
-          style={{ pointerEvents: "auto" }}
+          className="absolute left-1/2 bottom-2 flex -translate-x-1/2 translate-y-0 cursor-pointer items-center justify-center transition-transform duration-150 ease-in-out hover:scale-105"
         >
           <div
             style={{
@@ -62,11 +99,11 @@ export default function AvatarPicker({ file, onChange, ariaLabel = "Alterar foto
               justifyContent: "center",
               boxShadow: "0 4px 8px rgba(0,0,0,0.08)",
             }}
-            className="hover:scale-105"
           >
             <Image src="/Pen.svg" alt="Pen" width={14} height={14} />
           </div>
         </button>
+
         <input
           ref={fileRef}
           type="file"

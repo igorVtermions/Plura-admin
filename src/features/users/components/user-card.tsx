@@ -4,80 +4,79 @@ import React, { useEffect, useRef, useState } from "react";
 import { MoreVertical, User as UserIcon } from "lucide-react";
 import Image from "@/components/ui/Image";
 import { Button } from "@/components/ui/button";
+import Modal from "@/components/ui/Modal";
 import { cn } from "@/lib/utils";
+import type { UserCardUser } from "../types";
+import { STATUS_META } from "../visuals";
 
-export type Plan = "subscriber" | "free" | "banned";
+const MAX_DESCRIPTION_LENGTH = 80;
+const DEFAULT_DESCRIPTION = "Este usuário ainda não adicionou uma bio.";
 
-export type User = {
-  id: string;
-  name: string;
-  username: string;
-  bio: string;
-  avatarUrl?: string | null;
-  plan: Plan;
+type UserCardProps = {
+  user: UserCardUser;
+  onBan?: (userId: string) => void;
+  onUnban?: (userId: string) => void;
+  onViewProfile?: (userId: string) => void;
+  isBanning?: boolean;
+  isUnbanning?: boolean;
 };
 
-type PlanMeta = {
-  headerColor: string;
-  iconColor: string;
-  nameColor: string;
-  usernameColor: string;
-  bioColor: string;
-  avatarBorder: string;
-  avatarShadow: string;
-  actionBg: string;
-  actionBorder: string;
-  buttonGradient: string;
-  buttonBorder: string;
-};
-
-const PLAN_META: Record<Plan, PlanMeta> = {
-  subscriber: {
-    headerColor: "#A27DFF",
-    iconColor: "#5D47B1",
-    nameColor: "#2B1F58",
-    usernameColor: "#6350C9",
-    bioColor: "#4D4F72",
-    avatarBorder: "rgba(255, 255, 255, 0.68)",
-    avatarShadow: "0px 14px 28px rgba(144, 118, 236, 0.32)",
-    actionBg: "rgba(255, 255, 255, 0.28)",
-    actionBorder: "rgba(255, 255, 255, 0.45)",
-    buttonGradient: "linear-gradient(180deg, #9F85FF 0%, #7F60F5 100%)",
-    buttonBorder: "rgba(255, 255, 255, 0.6)",
-  },
-  free: {
-    headerColor: "#BBC7DA",
-    iconColor: "#42536C",
-    nameColor: "#23344E",
-    usernameColor: "#56667F",
-    bioColor: "#4A566B",
-    avatarBorder: "rgba(255, 255, 255, 0.7)",
-    avatarShadow: "0px 14px 28px rgba(118, 138, 167, 0.24)",
-    actionBg: "rgba(255, 255, 255, 0.32)",
-    actionBorder: "rgba(255, 255, 255, 0.54)",
-    buttonGradient: "linear-gradient(180deg, #8593AA 0%, #6E7D95 100%)",
-    buttonBorder: "rgba(255, 255, 255, 0.55)",
-  },
-  banned: {
-    headerColor: "#F08989",
-    iconColor: "#7D2E2E",
-    nameColor: "#661F1F",
-    usernameColor: "#8F3636",
-    bioColor: "#5D2020",
-    avatarBorder: "rgba(255, 255, 255, 0.7)",
-    avatarShadow: "0px 14px 28px rgba(201, 96, 96, 0.28)",
-    actionBg: "rgba(255, 255, 255, 0.32)",
-    actionBorder: "rgba(255, 255, 255, 0.52)",
-    buttonGradient: "linear-gradient(180deg, #E67070 0%, #C54C4C 100%)",
-    buttonBorder: "rgba(255, 255, 255, 0.55)",
-  },
-};
-
-export function UserCard({ user }: { user: User }) {
+export function UserCard({ user, onBan, onUnban, onViewProfile, isBanning = false, isUnbanning = false }: UserCardProps) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<"ban" | "unban" | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
-  const meta = PLAN_META[user.plan];
-  const hasAvatar = Boolean(user.avatarUrl && user.avatarUrl.trim().length > 0);
+  const meta = STATUS_META[user.status] ?? STATUS_META.pending;
+  const hasAvatar = typeof user.avatarUrl === "string" && user.avatarUrl.trim().length > 0;
+
+  const codename = user.codename?.trim();
+  const fallbackContact = user.email?.trim() || user.phone?.trim() || null;
+  const displayHandle = codename
+    ? `@${codename.startsWith("@") ? codename.slice(1) : codename}`
+    : fallbackContact ?? "Sem identificador";
+
+  const rawBio = typeof user.bio === "string" ? user.bio.trim() : "";
+  const baseDescription = rawBio.length > 0 ? rawBio : DEFAULT_DESCRIPTION;
+  const description =
+    baseDescription.length > MAX_DESCRIPTION_LENGTH
+      ? `${baseDescription.slice(0, MAX_DESCRIPTION_LENGTH - 3).trimEnd()}...`
+      : baseDescription;
+
+  const isBanned = user.status === "banned";
+  const canBan = typeof onBan === "function" && !isBanned;
+  const canUnban = typeof onUnban === "function" && isBanned;
+  const isBanDisabled = !canBan || isBanning;
+  const isUnbanDisabled = !canUnban || isUnbanning;
+  const banLabel = isBanning ? "Banindo..." : "Banir usuário";
+  const unbanLabel = isUnbanning ? "Desbanindo..." : "Desbanir usuário";
+
+  const handleBanClick = () => {
+    if (isBanDisabled || !onBan) return;
+    onBan(user.id);
+    setMenuOpen(false);
+  };
+
+  const openBanConfirm = () => {
+    if (isBanDisabled) return;
+    setMenuOpen(false);
+    setConfirmAction("ban");
+  };
+
+  const openUnbanConfirm = () => {
+    if (isUnbanDisabled) return;
+    setMenuOpen(false);
+    setConfirmAction("unban");
+  };
+
+  const handleConfirmAction = () => {
+    if (confirmAction === "ban") {
+      if (!onBan || isBanDisabled) return;
+      onBan(user.id);
+    } else if (confirmAction === "unban") {
+      if (!onUnban || isUnbanDisabled) return;
+      onUnban(user.id);
+    }
+    setConfirmAction(null);
+  };
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -89,6 +88,21 @@ export function UserCard({ user }: { user: User }) {
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, [menuOpen]);
+
+  const modalOpen = confirmAction !== null;
+  const isConfirmBan = confirmAction === "ban";
+  const confirmTitle = isConfirmBan ? "Banir usuário" : "Desbanir usuário";
+  const confirmSubtitle = isConfirmBan
+    ? `Tem certeza que deseja banir ${user.name}?`
+    : `Tem certeza que deseja desbanir ${user.name}?`;
+  const confirmDescription = isConfirmBan
+    ? "Essa ação impede o acesso do usuário até que ele seja desbanido manualmente. Deseja continuar?"
+    : "Essa ação restaurará o acesso do usuário imediatamente. Deseja continuar?";
+  const confirmDisabled = isConfirmBan ? isBanDisabled : isUnbanDisabled;
+  const confirmLabel = isConfirmBan ? banLabel : unbanLabel;
+  const confirmButtonClasses = isConfirmBan
+    ? "bg-[#C53030] text-white hover:bg-[#A22727] disabled:opacity-60"
+    : "bg-[#256740] text-white hover:bg-[#1F5A35] disabled:opacity-60";
 
   return (
     <article className="relative flex w-full max-w-[362px] flex-col overflow-hidden rounded-[22px] border border-transparent bg-white h-[282px]">
@@ -122,12 +136,32 @@ export function UserCard({ user }: { user: User }) {
               >
                 Ver perfil do usuário
               </button>
-              <button
-                type="button"
-                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[#C53030] hover:bg-[#FFF2F2]"
-              >
-                Banir usuário
-              </button>
+              {!isBanned && (
+                <button
+                  type="button"
+                  disabled={isBanDisabled}
+                  onClick={openBanConfirm}
+                  className={cn(
+                    "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[#C53030] hover:bg-[#FFF2F2]",
+                    isBanDisabled && "cursor-not-allowed opacity-60 hover:bg-transparent"
+                  )}
+                >
+                  {banLabel}
+                </button>
+              )}
+              {isBanned && (
+                <button
+                  type="button"
+                  disabled={isUnbanDisabled}
+                  onClick={openUnbanConfirm}
+                  className={cn(
+                    "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[#256740] hover:bg-[#E5F4ED]",
+                    isUnbanDisabled && "cursor-not-allowed opacity-60 hover:bg-transparent"
+                  )}
+                >
+                  {unbanLabel}
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -135,8 +169,8 @@ export function UserCard({ user }: { user: User }) {
 
       <div
         className={cn(
-          "absolute left-5 top-4 z-10 flex h-20 w-20 items-center justify-center overflow-hidden border-[3px]",
-          hasAvatar ? "rounded-[18px] bg-white/80" : "rounded-none bg-[#F4F6FF]"
+          "absolute left-5 top-4 z-10 flex h-20 w-20 items-center justify-center overflow-hidden border-[3px] rounded-[18px]",
+          hasAvatar ? "bg-white/80" : "bg-[#F4F6FF]"
         )}
         style={{
           borderColor: hasAvatar ? meta.avatarBorder : "#D0D9F1",
@@ -164,19 +198,13 @@ export function UserCard({ user }: { user: User }) {
           >
             {user.name}
           </h3>
-          <p
-            className="text-sm font-medium"
-            style={{ color: meta.usernameColor }}
-          >
-            @{user.username}
+          <p className="text-sm font-medium" style={{ color: meta.handleColor }}>
+            {displayHandle}
           </p>
         </div>
 
-        <p
-          className="mt-3 text-sm leading-relaxed"
-          style={{ color: meta.bioColor }}
-        >
-          {user.bio}
+        <p className="mt-3 text-sm leading-relaxed" style={{ color: meta.bioColor }}>
+          {description}
         </p>
 
         <div className="mt-auto pt-3">
@@ -184,17 +212,58 @@ export function UserCard({ user }: { user: User }) {
             type="button"
             variant="ghost"
             className="h-11 w-full rounded-[14px] border text-sm font-semibold transition-transform duration-150 hover:-translate-y-0.5 hover:bg-transparent hover:text-current focus-visible:ring-white/60 focus-visible:ring-offset-0"
-            style={{
-              background: meta.buttonGradient,
-              color: "#FFFFFF",
-              borderColor: meta.buttonBorder,
-            }}
-            onClick={() => {}}
+            style={{ background: meta.buttonGradient, color: "#FFFFFF", borderColor: meta.buttonBorder }}
+            onClick={() => onViewProfile?.(user.id)}
           >
             Ver perfil
           </Button>
         </div>
       </div>
+
+      <Modal
+        open={modalOpen}
+        onClose={() => setConfirmAction(null)}
+        title={confirmTitle}
+        subtitle={confirmSubtitle}
+        footer={
+          <div className="flex justify-end gap-3">
+            <Button
+              variant="outline"
+              onClick={() => setConfirmAction(null)}
+              className="border-[#D0D9F1] text-[#1F2A44] hover:bg-[#F4F6FF]"
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              onClick={handleConfirmAction}
+              disabled={confirmDisabled}
+              className={confirmButtonClasses}
+            >
+              {confirmLabel}
+            </Button>
+          </div>
+        }
+      >
+        <p className="text-sm text-[#5A6480]">{confirmDescription}</p>
+      </Modal>
     </article>
   );
+}
+
+function formatDate(value: string): string {
+  if (!value) return "Data desconhecida";
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return date.toLocaleString("pt-BR", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
