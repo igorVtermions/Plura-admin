@@ -194,10 +194,10 @@ export default function CreateSessionModal({ open, onClose, onContinue, tutorOpt
       setLoading(true);
       const body = {
         tutorId: selectedTutor?.id,
-        title: title.trim(),
+        name: title.trim(),
         startAt: startAt?.toISOString(),
         endAt: endAt?.toISOString(),
-        topic: selectedTopics,
+        topics: selectedTopics,
       } as const;
       const res = await api.post("/admin/live-chat-rooms", body);
       if (res.status >= 200 && res.status < 300) {

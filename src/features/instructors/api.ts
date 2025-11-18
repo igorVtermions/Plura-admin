@@ -165,7 +165,8 @@ export function adaptInstructor(raw: unknown): InstructorCardData | null {
       ? (data.profile as Record<string, unknown>)
       : data;
 
-  const id =
+  // id in API may be number or string; accept numeric ids by converting to string
+  const rawId =
     pickString(
       base.id,
       base.tutorId,
@@ -173,7 +174,16 @@ export function adaptInstructor(raw: unknown): InstructorCardData | null {
       data.id,
       data.tutorId,
       data._id,
-    ) ?? null;
+    );
+  const numericId = pickNumber(
+    base.id,
+    base.tutorId,
+    base._id,
+    data.id,
+    data.tutorId,
+    data._id,
+  );
+  const id = rawId ?? (typeof numericId === "number" ? String(numericId) : null);
   if (!id) return null;
 
   const name =

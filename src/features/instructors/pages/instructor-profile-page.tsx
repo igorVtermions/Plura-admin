@@ -18,6 +18,7 @@ import {
   fetchInstructorFollowers,
   fetchInstructorProfile,
 } from "../api";
+import api from "@/services/api";
 import { INSTRUCTOR_STATUS_META } from "../visuals";
 import type { InstructorCardData, InstructorProfile } from "../types";
 
@@ -57,6 +58,86 @@ export default function InstructorProfilePage() {
           setError("Não foi possível carregar o perfil do instrutor.");
           setProfile(null);
           return;
+        }
+        // raw profile fetch removed (debug panel cleanup)
+        // also try to fetch live-chat-rooms for this tutor and attach to profile
+        try {
+          let roomsRes;
+          try {
+            roomsRes = await api.get(`/admin/live-chat-rooms`, { params: { tutorId: id } });
+          } catch (e) {
+            roomsRes = await api.get(`/users/live-chat-rooms`, { params: { tutorId: id } });
+          }
+          const roomsPayload = roomsRes?.data ?? roomsRes;
+          let roomsArray: unknown[] = [];
+          if (Array.isArray(roomsPayload)) roomsArray = roomsPayload as unknown[];
+          else if (roomsPayload && typeof roomsPayload === "object") {
+            // try common places
+            const r = roomsPayload as Record<string, unknown>;
+            if (Array.isArray(r.items)) roomsArray = r.items as unknown[];
+            else if (Array.isArray(r.data)) roomsArray = r.data as unknown[];
+            else if (Array.isArray(r.liveRooms)) roomsArray = r.liveRooms as unknown[];
+            else if (Array.isArray(r.rooms)) roomsArray = r.rooms as unknown[];
+          }
+
+          if (Array.isArray(roomsArray) && roomsArray.length > 0) {
+            const adaptedSessions = roomsArray
+              .map((raw) => {
+                const rec = raw as Record<string, unknown>;
+                const rid = (rec.id ?? rec.roomId ?? rec._id ?? rec.roomCode ?? rec.code) as any;
+                const title = (rec.title ?? rec.name ?? rec.topic ?? rec.roomTitle) as any;
+                const start = (rec.startAt ?? rec.startTime ?? rec.beginAt ?? rec.date) as any;
+                const end = (rec.endAt ?? rec.endTime ?? rec.finishAt ?? rec.dateEnd) as any;
+                const participants = Array.isArray(rec["liveUsers"]) ? (rec["liveUsers"] as unknown[]).length : (typeof rec["participantsCount"] === "number" ? (rec["participantsCount"] as number) : null);
+                const isLive = (() => {
+                  try {
+                    const s = start ? new Date(start) : null;
+                    const e = end ? new Date(end) : null;
+                    const now = new Date();
+                    if (s && e && !isNaN(s.getTime()) && !isNaN(e.getTime())) return now >= s && now <= e;
+                    return !!rec["isLive"] || !!rec["live"];
+                  } catch { return false; }
+                })();
+
+                // determine owner/tutor id on the room payload
+                const ownerCandidate = rec.tutorId ?? (rec.tutor && (rec.tutor as any).id) ?? rec.hostId ?? rec.ownerId ?? rec.tutor_id ?? rec.instructorId;
+
+                return {
+                  id: rid ? String(rid) : undefined,
+                  title: typeof title === "string" ? title : String(title ?? "Sessão"),
+                  startTime: start ? String(start) : null,
+                  endTime: end ? String(end) : null,
+                  durationMinutes: null,
+                  participantsCount: typeof participants === "number" ? participants : null,
+                  isLive: Boolean(isLive),
+                  status: isLive ? "live" : null,
+                  roomId: rid ? String(rid) : null,
+                  __ownerId: ownerCandidate != null ? String(ownerCandidate) : null,
+                } as unknown as import("../types").InstructorProfileActivity & { __ownerId?: string | null };
+              })
+              .filter((s) => s && typeof (s as any).id === "string")
+              // only keep rooms that belong to the current instructor id
+              .filter((s) => {
+                const owner = (s as any).__ownerId ?? null;
+                if (!owner) return false;
+                return String(owner) === String(id);
+              })
+              .map((s) => {
+                // remove helper prop before attaching
+                const copy = { ...(s as any) };
+                delete copy.__ownerId;
+                return copy as import("../types").InstructorProfileActivity;
+              });
+
+            if (adaptedSessions.length > 0) {
+              // merge into result profile
+              result.liveSessions = adaptedSessions;
+              result.liveSessionsTotal = adaptedSessions.length;
+            }
+          }
+        } catch (err) {
+          // ignore if rooms fetch fails
+          // console.error("fetch tutor rooms error", err);
         }
         setProfile(result);
       } catch (err) {
@@ -223,8 +304,17 @@ export default function InstructorProfilePage() {
           <InstructorActivitySection
             sessions={profile.liveSessions}
             total={profile.liveSessionsTotal}
+            hostName={profile.name}
           />
         </section>
+        {profile.liveSessions && profile.liveSessions.length === 0 && (
+          <div className="mt-6">
+            <details className="p-3 border rounded-md bg-[#FBFBFF]">
+              <summary className="cursor-pointer text-sm text-[#5A6480]">Nenhuma sala registrada</summary>
+              <div className="text-xs mt-2 text-[#5A6480]">Não foram encontradas salas para este instrutor.</div>
+            </details>
+          </div>
+        )}
       </div>
 
       <InstructorFollowersModal

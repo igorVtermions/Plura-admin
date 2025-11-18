@@ -74,6 +74,9 @@ export default function InstructorsPage() {
           perPage,
         };
         const response = await fetchInstructors(params);
+        // also log to console for developer inspection
+        // eslint-disable-next-line no-console
+        console.debug("fetchInstructors response:", response);
         const adapted = response.data
           .map(adaptInstructor)
           .filter((item): item is InstructorCardData => item !== null);
@@ -94,6 +97,9 @@ export default function InstructorsPage() {
             : Math.max(1, Math.ceil(total / limit));
 
         setInstructors(adapted);
+        if ((!adapted || adapted.length === 0) && response && typeof response === "object") {
+          // nothing to adapt — keep empty list
+        }
         setMeta({
           total,
           page: currentPage,
@@ -257,8 +263,9 @@ export default function InstructorsPage() {
                 />
               ))}
           {!loading && instructors.length === 0 && !error && (
-            <div className="col-span-full rounded-2xl border border-dashed border-[#D0D9F1] p-10 text-center text-[#5A6480]">
-              Nenhum instrutor encontrado com os filtros atuais.
+            <div className="col-span-full rounded-2xl border border-dashed border-[#D0D9F1] p-6 text-center text-[#5A6480]">
+              <div>Nenhum instrutor encontrado com os filtros atuais.</div>
+              
             </div>
           )}
         </section>

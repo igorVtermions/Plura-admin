@@ -71,7 +71,14 @@ export default function Step1Basics(props: Props, ref: React.ForwardedRef<HTMLDi
             <div className="relative" onClick={() => { try { startHiddenRef.current?.showPicker?.(); } catch {} startHiddenRef.current?.click(); startHiddenRef.current?.focus(); }}>
               <Input readOnly value={formatDate(startAt)} placeholder="dd/mm/aaaa às hh:mm" className="pr-10 cursor-pointer focus:outline-none focus:ring-0 focus:border-[#977CEC] focus:shadow-[inset_0_0_0_2px_rgba(151,124,236,0.18)]" />
               <ChevronDown className="h-4 w-4 text-slate-600 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-              <input ref={startHiddenRef} type="datetime-local" onChange={(e) => setStartAt(e.target.value ? new Date(e.target.value) : null)} className="absolute inset-0 opacity-0 pointer-events-none" aria-hidden />
+              <input
+                ref={startHiddenRef}
+                type="datetime-local"
+                onChange={(e) => setStartAt(e.target.value ? new Date(e.target.value) : null)}
+                className="absolute inset-0 opacity-0 pointer-events-none"
+                aria-label="Data e hora de início"
+                tabIndex={-1}
+              />
             </div>
           </div>
 
@@ -80,7 +87,14 @@ export default function Step1Basics(props: Props, ref: React.ForwardedRef<HTMLDi
             <div className="relative" onClick={() => { try { endHiddenRef.current?.showPicker?.(); } catch {} endHiddenRef.current?.click(); endHiddenRef.current?.focus(); }}>
               <Input readOnly value={formatDate(endAt)} placeholder="dd/mm/aaaa às hh:mm" className="pr-10 cursor-pointer focus:outline-none focus:ring-0 focus:border-[#977CEC] focus:shadow-[inset_0_0_0_2px_rgba(151,124,236,0.18)]" />
               <ChevronDown className="h-4 w-4 text-slate-600 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-              <input ref={endHiddenRef} type="datetime-local" onChange={(e) => setEndAt(e.target.value ? new Date(e.target.value) : null)} className="absolute inset-0 opacity-0 pointer-events-none" aria-hidden />
+              <input
+                ref={endHiddenRef}
+                type="datetime-local"
+                onChange={(e) => setEndAt(e.target.value ? new Date(e.target.value) : null)}
+                className="absolute inset-0 opacity-0 pointer-events-none"
+                aria-label="Data e hora de término"
+                tabIndex={-1}
+              />
             </div>
           </div>
         </div>

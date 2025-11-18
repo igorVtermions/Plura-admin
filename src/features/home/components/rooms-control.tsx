@@ -71,6 +71,7 @@ export function RoomsControl() {
   const [error, setError] = useState<string | null>(null);
   const [liveRooms, setLiveRooms] = useState<RoomUI[]>([]);
   const [soonRooms, setSoonRooms] = useState<RoomUI[]>([]);
+  const [allRooms, setAllRooms] = useState<RoomUI[]>([]);
 
   async function fetchRooms() {
     setLoading(true);
@@ -95,9 +96,7 @@ export function RoomsControl() {
       }
 
       const adapted = all.map((x) => adaptRoom(x as RoomApi)).filter((r): r is RoomUI => r !== null);
-      const { live, soon } = categorizeRooms(adapted);
-      setLiveRooms(live);
-      setSoonRooms(soon);
+      setAllRooms(adapted);
     } catch (e) {
       console.error("fetchRooms error", e);
       setError("Falha ao carregar salas");
@@ -110,6 +109,29 @@ export function RoomsControl() {
 
   useEffect(() => {
     fetchRooms();
+  }, []);
+
+  // Re-categorize rooms periodically so cards move from "soon" to "live" without a full refresh
+  useEffect(() => {
+    function updateCategories() {
+      const { live, soon } = categorizeRooms(allRooms);
+      setLiveRooms(live);
+      setSoonRooms(soon);
+    }
+    // run once immediately
+    updateCategories();
+    // then update every 30s
+    const id = setInterval(updateCategories, 30 * 1000);
+    return () => clearInterval(id);
+  }, [allRooms]);
+
+  // Listen for session creation events to refresh list automatically
+  useEffect(() => {
+    function onSessionCreated() {
+      fetchRooms();
+    }
+    window.addEventListener("session:created", onSessionCreated as EventListener);
+    return () => window.removeEventListener("session:created", onSessionCreated as EventListener);
   }, []);
 
   useEffect(() => setPage(1), [tab]);
@@ -197,7 +219,8 @@ export function RoomsControl() {
           ))
         )}
       </div>
-      <div className="flex items-center justify-center flex-shrink-0 mt-auto md:hidden" style={{ marginBottom: 0 }}>
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center flex-shrink-0 mt-4 md:hidden" style={{ marginBottom: 0 }}>
         <button
           type="button"
           aria-label="Página anterior"
@@ -254,10 +277,12 @@ export function RoomsControl() {
         >
           <Image src="/Arrow.svg" alt="Próxima" width={13} height={13} className="object-contain rotate-180" />
         </button>
-      </div>
-      <div className="hidden md:flex fixed left-1/2 transform -translate-x-1/2 bottom-4 z-50 w-full max-w-5xl px-8 pointer-events-auto">
-        <div className="w-full bg-transparent flex items-center justify-center">
-          <div className="bg-transparent p-0 flex items-center justify-center">
+        </div>
+      )}
+      {totalPages > 1 && (
+        <div className="hidden md:flex w-full justify-center mt-4">
+          <div className="w-full max-w-5xl flex items-center justify-center">
+            <div className="p-0 flex items-center justify-center">
             <button
               type="button"
               aria-label="Página anterior"
@@ -316,9 +341,10 @@ export function RoomsControl() {
             >
               <Image src="/Arrow.svg" alt="Próxima" width={13} height={13} className="object-contain rotate-180" />
             </button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       <style jsx>{`
         .page-transition { animation: pageFade 320ms cubic-bezier(.22,.9,.32,1); }
