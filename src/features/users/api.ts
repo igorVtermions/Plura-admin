@@ -264,6 +264,11 @@ export async function fetchUserProfile(
   return (response?.data ?? {}) as UserProfileResponse;
 }
 
+export async function fetchUserSessionsAdmin(userId: string): Promise<any> {
+  const response = await api.get(`/admin/users/${userId}/sessions`);
+  return response?.data ?? null;
+}
+
 export async function fetchFollowers(
   userId: string,
   params?: FollowParams,

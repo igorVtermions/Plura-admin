@@ -23,6 +23,7 @@ import {
   fetchUserProfile,
   unbanUser,
 } from "../api";
+import { fetchUserSessionsAdmin } from "../api";
 
 type ConfirmAction = "ban" | "unban" | null;
 const FOLLOW_PAGE_SIZE = 20;
@@ -248,6 +249,7 @@ export default function UserProfilePage() {
   const [pendingAction, setPendingAction] = useState(false);
   const [viewDataOpen, setViewDataOpen] = useState(false);
   const [reportsModalOpen, setReportsModalOpen] = useState(false);
+  const [finishedSessions, setFinishedSessions] = useState<Array<Record<string, unknown>> | null>(null);
 
   const [followModalOpen, setFollowModalOpen] = useState(false);
   const [followModalTab, setFollowModalTab] = useState<"followers" | "following">("followers");
@@ -269,6 +271,18 @@ export default function UserProfilePage() {
           return;
         }
         setProfile(normalized);
+        // try to fetch finished sessions (admin endpoint)
+        try {
+          const sessionsResp = await fetchUserSessionsAdmin(userId);
+          if (!cancelled && sessionsResp && typeof sessionsResp === "object") {
+            // expect { items: [...] }
+            const items = (sessionsResp.items && Array.isArray(sessionsResp.items)) ? sessionsResp.items : [];
+            setFinishedSessions(items as Array<Record<string, unknown>>);
+          }
+        } catch (err) {
+          // ignore fetch errors for sessions
+          console.debug("fetchUserSessionsAdmin error", err);
+        }
       } catch (err) {
         if (cancelled) return;
         console.error("fetchUserProfile error", err);
@@ -431,10 +445,12 @@ export default function UserProfilePage() {
           </article>
 
           <section className="mt-10">
-            <UserActivitySection
-              liveHistory={profile.liveHistory}
-              liveHistoryTotal={profile.liveHistoryTotal}
-            />
+              <UserActivitySection
+                liveHistory={profile.liveHistory}
+                liveHistoryTotal={profile.liveHistoryTotal}
+                finishedSessions={finishedSessions ?? undefined}
+                finishedTotal={finishedSessions ? finishedSessions.length : undefined}
+              />
           </section>
         </div>
       </div>

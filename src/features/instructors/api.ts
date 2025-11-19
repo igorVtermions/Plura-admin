@@ -740,6 +740,39 @@ export async function fetchInstructorProfile(id: string): Promise<InstructorProf
   return adaptInstructorProfilePayload(response?.data ?? response);
 }
 
+export async function fetchTutorSessionsAdmin(tutorId: string): Promise<{
+  tutor?: unknown;
+  live: unknown[];
+  upcoming: unknown[];
+  finished: unknown[];
+} | null> {
+  if (!tutorId) return null;
+  try {
+    const res = await api.get(`/api/admin/tutors/${tutorId}/sessions`);
+    const payload = res?.data ?? res;
+    if (!payload || typeof payload !== "object") return null;
+    const p = payload as Record<string, unknown>;
+    const live = Array.isArray(p.live) ? p.live : [];
+    const upcoming = Array.isArray(p.upcoming) ? p.upcoming : [];
+    const finished = Array.isArray(p.finished) ? p.finished : [];
+    return { tutor: p.tutor, live, upcoming, finished };
+  } catch (err) {
+    // try alternate path without /api prefix
+    try {
+      const res = await api.get(`/admin/tutors/${tutorId}/sessions`);
+      const payload = res?.data ?? res;
+      if (!payload || typeof payload !== "object") return null;
+      const p = payload as Record<string, unknown>;
+      const live = Array.isArray(p.live) ? p.live : [];
+      const upcoming = Array.isArray(p.upcoming) ? p.upcoming : [];
+      const finished = Array.isArray(p.finished) ? p.finished : [];
+      return { tutor: p.tutor, live, upcoming, finished };
+    } catch (e) {
+      return null;
+    }
+  }
+}
+
 export async function fetchInstructorFollowers(
   tutorId: string,
   params: InstructorFollowersParams = {},

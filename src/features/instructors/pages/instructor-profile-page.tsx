@@ -60,84 +60,57 @@ export default function InstructorProfilePage() {
           return;
         }
         // raw profile fetch removed (debug panel cleanup)
-        // also try to fetch live-chat-rooms for this tutor and attach to profile
+        // try the new admin endpoint that returns grouped sessions (live/upcoming/finished)
         try {
-          let roomsRes;
-          try {
-            roomsRes = await api.get(`/admin/live-chat-rooms`, { params: { tutorId: id } });
-          } catch (e) {
-            roomsRes = await api.get(`/users/live-chat-rooms`, { params: { tutorId: id } });
-          }
-          const roomsPayload = roomsRes?.data ?? roomsRes;
-          let roomsArray: unknown[] = [];
-          if (Array.isArray(roomsPayload)) roomsArray = roomsPayload as unknown[];
-          else if (roomsPayload && typeof roomsPayload === "object") {
-            // try common places
-            const r = roomsPayload as Record<string, unknown>;
-            if (Array.isArray(r.items)) roomsArray = r.items as unknown[];
-            else if (Array.isArray(r.data)) roomsArray = r.data as unknown[];
-            else if (Array.isArray(r.liveRooms)) roomsArray = r.liveRooms as unknown[];
-            else if (Array.isArray(r.rooms)) roomsArray = r.rooms as unknown[];
-          }
+          const sessionsResp = await import("../api").then((m) => m.fetchTutorSessionsAdmin(id));
+          // eslint-disable-next-line no-console
+          console.debug("instructor-profile: fetchTutorSessionsAdmin result:", sessionsResp);
+          if (sessionsResp) {
+            const mapped: import("../types").InstructorProfileActivity[] = [];
+            const mapRoom = (room: Record<string, unknown>, kind: "live" | "upcoming" | "finished") => {
+              const rid = (room.id ?? room.roomId ?? room._id ?? room.code) as any;
+              const title = (room.name ?? room.title ?? room.roomTitle ?? room.topic) as any;
+              const start = (room.startAt ?? room.startTime ?? room.date ?? room.beginAt) as any;
+              const end = (room.endAt ?? room.endTime ?? room.actualEndAt ?? room.finishAt) as any;
+              const stats = (room.stats ?? room) as Record<string, unknown> | undefined;
+              let participants: number | null = null;
+              if (stats) {
+                if (typeof stats.participantsCount === "number") participants = stats.participantsCount as number;
+                else if (typeof stats.totalParticipants === "number") participants = stats.totalParticipants as number;
+                else if (typeof stats.participants === "number") participants = stats.participants as number;
+                else if (typeof stats.viewers === "number") participants = stats.viewers as number;
+              }
+              return {
+                id: rid ? String(rid) : String(Math.random()),
+                title: typeof title === "string" ? title : String(title ?? "Sessão"),
+                startTime: start ? String(start) : null,
+                endTime: end ? String(end) : null,
+                durationMinutes: null,
+                participantsCount: typeof participants === "number" ? participants : null,
+                isLive: kind === "live",
+                status: kind === "live" ? "live" : kind === "upcoming" ? "upcoming" : "finished",
+                roomId: rid ? String(rid) : null,
+              } as import("../types").InstructorProfileActivity;
+            };
 
-          if (Array.isArray(roomsArray) && roomsArray.length > 0) {
-            const adaptedSessions = roomsArray
-              .map((raw) => {
-                const rec = raw as Record<string, unknown>;
-                const rid = (rec.id ?? rec.roomId ?? rec._id ?? rec.roomCode ?? rec.code) as any;
-                const title = (rec.title ?? rec.name ?? rec.topic ?? rec.roomTitle) as any;
-                const start = (rec.startAt ?? rec.startTime ?? rec.beginAt ?? rec.date) as any;
-                const end = (rec.endAt ?? rec.endTime ?? rec.finishAt ?? rec.dateEnd) as any;
-                const participants = Array.isArray(rec["liveUsers"]) ? (rec["liveUsers"] as unknown[]).length : (typeof rec["participantsCount"] === "number" ? (rec["participantsCount"] as number) : null);
-                const isLive = (() => {
-                  try {
-                    const s = start ? new Date(start) : null;
-                    const e = end ? new Date(end) : null;
-                    const now = new Date();
-                    if (s && e && !isNaN(s.getTime()) && !isNaN(e.getTime())) return now >= s && now <= e;
-                    return !!rec["isLive"] || !!rec["live"];
-                  } catch { return false; }
-                })();
+            const tutorSessions = sessionsResp.live.concat(sessionsResp.upcoming, sessionsResp.finished);
+            for (const r of sessionsResp.live) {
+              if (r && typeof r === "object") mapped.push(mapRoom(r as Record<string, unknown>, "live"));
+            }
+            for (const r of sessionsResp.upcoming) {
+              if (r && typeof r === "object") mapped.push(mapRoom(r as Record<string, unknown>, "upcoming"));
+            }
+            for (const r of sessionsResp.finished) {
+              if (r && typeof r === "object") mapped.push(mapRoom(r as Record<string, unknown>, "finished"));
+            }
 
-                // determine owner/tutor id on the room payload
-                const ownerCandidate = rec.tutorId ?? (rec.tutor && (rec.tutor as any).id) ?? rec.hostId ?? rec.ownerId ?? rec.tutor_id ?? rec.instructorId;
-
-                return {
-                  id: rid ? String(rid) : undefined,
-                  title: typeof title === "string" ? title : String(title ?? "Sessão"),
-                  startTime: start ? String(start) : null,
-                  endTime: end ? String(end) : null,
-                  durationMinutes: null,
-                  participantsCount: typeof participants === "number" ? participants : null,
-                  isLive: Boolean(isLive),
-                  status: isLive ? "live" : null,
-                  roomId: rid ? String(rid) : null,
-                  __ownerId: ownerCandidate != null ? String(ownerCandidate) : null,
-                } as unknown as import("../types").InstructorProfileActivity & { __ownerId?: string | null };
-              })
-              .filter((s) => s && typeof (s as any).id === "string")
-              // only keep rooms that belong to the current instructor id
-              .filter((s) => {
-                const owner = (s as any).__ownerId ?? null;
-                if (!owner) return false;
-                return String(owner) === String(id);
-              })
-              .map((s) => {
-                // remove helper prop before attaching
-                const copy = { ...(s as any) };
-                delete copy.__ownerId;
-                return copy as import("../types").InstructorProfileActivity;
-              });
-
-            if (adaptedSessions.length > 0) {
-              // merge into result profile
-              result.liveSessions = adaptedSessions;
-              result.liveSessionsTotal = adaptedSessions.length;
+            if (mapped.length > 0) {
+              result.liveSessions = mapped;
+              result.liveSessionsTotal = mapped.length;
             }
           }
         } catch (err) {
-          // ignore if rooms fetch fails
-          // console.error("fetch tutor rooms error", err);
+          // ignore
         }
         setProfile(result);
       } catch (err) {
@@ -309,10 +282,9 @@ export default function InstructorProfilePage() {
         </section>
         {profile.liveSessions && profile.liveSessions.length === 0 && (
           <div className="mt-6">
-            <details className="p-3 border rounded-md bg-[#FBFBFF]">
-              <summary className="cursor-pointer text-sm text-[#5A6480]">Nenhuma sala registrada</summary>
-              <div className="text-xs mt-2 text-[#5A6480]">Não foram encontradas salas para este instrutor.</div>
-            </details>
+            <div className="col-span-full rounded-2xl border border-dashed border-[#D0D9F1] p-10 text-center text-[#5A6480]">
+              Nenhuma atividade registrada para este tutor.
+            </div>
           </div>
         )}
       </div>

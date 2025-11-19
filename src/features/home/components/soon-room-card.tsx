@@ -107,7 +107,7 @@ export function SoonRoomCard({
 
   return (
     <article
-      className="border rounded-md p-4 bg-[#FFF2E0] transition-shadow hover:shadow-sm"
+      className="flex h-full flex-col border rounded-md p-4 bg-[#FFF2E0] transition-shadow hover:shadow-sm"
       style={{ borderColor: "#FFD7AD" }}
       aria-labelledby={`soon-room-${topic}`}
     >
@@ -127,7 +127,7 @@ export function SoonRoomCard({
 
       <p className="text-[12px] font-normal text-[#582F01] mb-3">{host}</p>
 
-      <div>
+      <div className="mt-auto">
         <button
           type="button"
           onClick={onToggleReminder}

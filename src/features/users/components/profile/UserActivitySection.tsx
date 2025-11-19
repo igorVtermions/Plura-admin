@@ -2,14 +2,17 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import type { UserProfileActivity } from "../../types";
+import { EndedRoomCard } from "@/features/home/components/ended-room-card";
 import { formatDateTime, formatDuration } from "../../profile-formatters";
 
 type Props = {
   liveHistory: UserProfileActivity[];
   liveHistoryTotal: number;
+  finishedSessions?: Array<Record<string, any>>;
+  finishedTotal?: number;
 };
 
-const UserActivitySection: React.FC<Props> = ({ liveHistory, liveHistoryTotal }) => (
+const UserActivitySection: React.FC<Props> = ({ liveHistory, liveHistoryTotal, finishedSessions, finishedTotal }) => (
   <section className="mt-10 space-y-6">
     <header className="flex items-center justify-between">
       <h2 className="text-lg font-semibold text-[#191F33]">Atividade</h2>
@@ -19,7 +22,33 @@ const UserActivitySection: React.FC<Props> = ({ liveHistory, liveHistoryTotal })
     </header>
 
     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-      {liveHistory.length === 0 ? (
+      {Array.isArray(finishedSessions) && finishedSessions.length > 0 ? (
+        finishedSessions.map((item) => {
+          const id = String(item.roomHistoryId ?? item.roomId ?? item.id ?? Math.random());
+          const title =
+            typeof item.title === "string"
+              ? item.title
+              : Array.isArray(item.topic)
+              ? String(item.topic[0] ?? "Sala")
+              : String(item.topic ?? "Sala");
+          const startAt = item.startAt ?? item.startedAt ?? null;
+          const endAt = item.actualEndAt ?? item.endAt ?? item.endTime ?? null;
+          const tutorName = item.tutor && typeof item.tutor === "object" ? item.tutor.name ?? "" : "";
+
+          return (
+            <EndedRoomCard
+              key={id}
+              id={id}
+              startAt={startAt}
+              endAt={endAt}
+              topic={title}
+              host={tutorName}
+              liveUsers={[]}
+              onView={(rid) => window.location.assign(`/rooms/${rid}`)}
+            />
+          );
+        })
+      ) : liveHistory.length === 0 ? (
         <div className="col-span-full rounded-2xl border border-dashed border-[#D0D9F1] p-10 text-center text-[#5A6480]">
           Nenhuma atividade registrada para este usuário.
         </div>
