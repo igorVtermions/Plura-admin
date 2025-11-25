@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "@/components/router/Link";
 import { useRouter } from "@/lib/router";
-import api from "@/services/api";
+import api, { setClientToken } from "@/services/api";
 import axios from "axios";
 import { Eye, EyeClosed } from "lucide-react";
 
@@ -61,22 +61,25 @@ export function RegisterForm() {
         confirmPassword,
       });
 
-      const rawId = res.data?.id ?? res.data?.adminId ?? res.data?.admin?.id;
-      const adminId = rawId != null ? Number(rawId) : undefined;
-
+      // Após registrar, tentar login automático e redirecionar para /home.
       try {
-        if (!Number.isNaN(adminId)) {
-          await api.post("/admin/pin/send", { adminId, via: "email" });
-        } else {
-          await api.post("/admin/pin/send", { email, via: "email" });
+        const loginRes = await api.post("/admin/login", { email, password: pw });
+        const token = loginRes.data?.token ?? loginRes.data?.accessToken ?? null;
+        if (token) {
+          try { setClientToken(token); } catch {}
+          router.push("/home");
+          return;
         }
-      } catch {
+        // Se não veio token, mostrar mensagem genérica de sucesso
+        setError("Conta criada com sucesso. Faça login para acessar.");
+        router.push("/");
+        return;
+      } catch (loginErr) {
+        // Não bloquear o fluxo de registro se o login automático falhar
+        setError("Conta criada com sucesso, porém falha ao efetuar login automático. Faça login manualmente.");
+        router.push("/");
+        return;
       }
-
-      const q = new URLSearchParams();
-      q.set("email", email);
-      if (!Number.isNaN(adminId)) q.set("adminId", String(adminId));
-      router.push(`/verify?${q.toString()}`);
     } catch (err: unknown) {
       let message = "Erro ao criar conta";
       if (axios.isAxiosError(err)) {
