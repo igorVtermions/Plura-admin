@@ -1,22 +1,24 @@
-﻿import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
-import { ThemeProvider } from '@/components/theme-provider'
-import { SidebarProvider } from '@/components/layout/sidebar-context'
-import { Toaster } from 'react-hot-toast'
-import HeaderWrapper from '@/components/layout/header-wrapper'
-import { Sidebar } from '@/components/layout/sidebar'
-import HomePage from '@/features/home/pages/home-page'
-import RegisterPage from '@/features/auth/pages/register-page'
-import SupportPage from '@/features/support/pages/support-page'
-import SupportChatPage from '@/features/support/pages/support-chat-page'
-import NotFoundPage from '@/features/misc/pages/not-found-page'
-import ForgotPasswordPage from '@/app/forgot-password/page'
+﻿import ForgotPasswordPage from '@/app/forgot-password/page'
 import ResetPasswordPage from '@/app/reset-password/page'
 import VerifyPage from '@/app/verify/page'
+import HeaderWrapper from '@/components/layout/header-wrapper'
+import { Sidebar } from '@/components/layout/sidebar'
+import { SidebarProvider } from '@/components/layout/sidebar-context'
+import { ThemeProvider } from '@/components/theme-provider'
 import LoginPage from '@/features/auth/pages/login-page'
-import UsersPage from '@/features/users/pages/users-page'
-import UserProfilePage from '@/features/users/pages/user-profile-page'
-import InstructorsPage from '@/features/instructors/pages/instructors-page'
+import RegisterPage from '@/features/auth/pages/register-page'
+import HomePage from '@/features/home/pages/home-page'
 import InstructorProfilePage from '@/features/instructors/pages/instructor-profile-page'
+import InstructorsPage from '@/features/instructors/pages/instructors-page'
+import NotFoundPage from '@/features/misc/pages/not-found-page'
+import SupportChatPage from '@/features/support/pages/support-chat-page'
+import SupportPage from '@/features/support/pages/support-page'
+import UserProfilePage from '@/features/users/pages/user-profile-page'
+import UsersPage from '@/features/users/pages/users-page'
+import { Toaster } from 'react-hot-toast'
+import { Route, Routes, useLocation } from 'react-router-dom'
+import { MetricsPage } from './features/metrics/pages'
+import { NetworkPage } from './features/network/pages'
 
 export default function App() {
   const { pathname } = useLocation()
@@ -44,6 +46,8 @@ export default function App() {
                 <Route path="/users/:userId" element={<UserProfilePage />} />
                 <Route path="/instructors" element={<InstructorsPage />} />
                 <Route path="/instructors/:instructorId" element={<InstructorProfilePage />} />
+                <Route path="/network" element={<NetworkPage />} />
+                <Route path="/metrics" element={<MetricsPage />} />
                 <Route path="*" element={<div className="p-6"><NotFoundPage /></div>} />
               </Routes>
             </main>
@@ -54,7 +58,3 @@ export default function App() {
     </ThemeProvider>
   )
 }
-
-
-
-
