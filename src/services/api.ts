@@ -1,8 +1,42 @@
 import axios from "axios";
+import { createClient } from "@supabase/supabase-js";
 
 const API_BASE =
   import.meta.env.VITE_API_URL ??
   "https://p1tct9i4re.execute-api.sa-east-1.amazonaws.com/api";
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.warn("Supabase URL or Anon Key is missing from .env files. Supabase client will not be initialized.");
+}
+
+export const supabase = supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey) : undefined;
+
+export async function invokeFunction<T = unknown>(
+  functionName: string,
+  options: {
+    method?: 'POST' | 'GET' | 'PUT' | 'DELETE';
+    body?: Record<string, unknown> | BodyInit;
+    headers?: Record<string, string>;
+  } = {}
+) {
+  if (!supabase) {
+    throw new Error("Supabase client is not initialized. Check your .env configuration.");
+  }
+  const { data, error } = await supabase.functions.invoke<T>(functionName, {
+    ...options,
+    body: options.body && typeof options.body === 'object' ? JSON.stringify(options.body) : options.body,
+  });
+
+  if (error) {
+    console.error(`Error invoking function '${functionName}':`, error);
+    throw error;
+  }
+
+  return data;
+}
 
 const api = axios.create({
   baseURL: API_BASE,
