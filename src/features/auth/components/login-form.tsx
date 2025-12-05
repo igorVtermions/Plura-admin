@@ -7,7 +7,7 @@ import { useRouter } from "@/lib/router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import api, { setClientToken } from "@/services/api";
+import { invokeFunction, setClientToken } from "@/services/api";
 import axios from "axios";
 
 export function LoginForm() {
@@ -32,9 +32,12 @@ export function LoginForm() {
     try {
       setLoading(true);
       try { setClientToken(null); } catch {}
-      const res = await api.post("/admin/login", { email, password });
+      const res = await invokeFunction<{ token?: string; accessToken?: string; message?: string }>("users-login", {
+        method: "POST",
+        body: { email, password },
+      });
 
-      const token = res.data?.token ?? res.data?.accessToken ?? null;
+      const token = res.token ?? res.accessToken ?? null;
       if (token) {
         setClientToken(token);
         router.push("/home");
@@ -45,12 +48,13 @@ export function LoginForm() {
       setError(message);
     } catch (err: unknown) {
       let message = "Erro ao autenticar.";
-      if (axios.isAxiosError(err)) {
-        const data = err.response?.data as { message?: string; error?: string } | undefined;
-        if (err.response?.status === 401) message = "Credenciais inválidas.";
-        else message = data?.message ?? data?.error ?? err.message ?? message;
-      } else if (err instanceof Error) {
-        message = err.message;
+      if (err instanceof Error) {
+        // Supabase function invocation error might include this
+        if (err.message.includes("credentials")) {
+          message = "Credenciais inválidas.";
+        } else {
+          message = err.message;
+        }
       }
       setError(message);
     } finally {

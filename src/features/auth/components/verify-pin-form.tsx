@@ -4,9 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import api from "@/services/api";
-import { useRouter } from "@/lib/router";
-import axios from "axios";
+import { invokeFunction } from "@/services/api";
 
 type Props = { email: string; adminId?: string };
 
@@ -67,14 +65,11 @@ export function VerifyPinForm({ email, adminId }: Props) {
 
     try {
       setLoading(true);
-      await api.post("/admin/pin/verify", payload);
+      await invokeFunction("verify-pin", { method: 'POST', body: payload });
       router.push("/home");
     } catch (err: unknown) {
       let message = "Erro ao verificar PIN";
-      if (axios.isAxiosError(err)) {
-        const data = err.response?.data as { message?: string; error?: string } | undefined;
-        message = data?.message ?? data?.error ?? err.message ?? message;
-      } else if (err instanceof Error) {
+      if (err instanceof Error) {
         message = err.message;
       }
       setError(message);
@@ -88,15 +83,12 @@ export function VerifyPinForm({ email, adminId }: Props) {
     setSuccess(null);
     try {
       setLoading(true);
-      const res = await api.post("/admin/pin/resend", { email });
-      const msg = res.data?.message ?? "PIN reenviado. Verifique seu e-mail.";
+      const res = await invokeFunction<{ message?: string }>("resend-pin", { method: 'POST', body: { email } });
+      const msg = res.message ?? "PIN reenviado. Verifique seu e-mail.";
       setSuccess(msg);
     } catch (err: unknown) {
       let message = "Erro ao reenviar PIN";
-      if (axios.isAxiosError(err)) {
-        const data = err.response?.data as { message?: string; error?: string } | undefined;
-        message = data?.message ?? data?.error ?? err.message ?? message;
-      } else if (err instanceof Error) {
+      if (err instanceof Error) {
         message = err.message;
       }
       setError(message);

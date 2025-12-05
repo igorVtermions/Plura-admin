@@ -5,7 +5,7 @@ import Link from "@/components/router/Link";
 import Image from "@/components/ui/Image";
 import { useRouter } from "@/lib/router";
 import { Button } from "@/components/ui/button";
-import api from "@/services/api";
+import { invokeFunction, supabase } from "@/services/api";
 import Notifications from "./Notifications";
 
 type HeaderProps = {
@@ -23,8 +23,7 @@ export function Header({ adminName = "Admin" }: HeaderProps) {
 
     async function fetchMe() {
       try {
-        const res = await api.get("/admin/me");
-        const admin = res.data?.admin ?? res.data ?? {};
+        const admin = await invokeFunction<{ name?: string; fullName?: string; username?: string; email?: string }>("users-me");
         const display = admin?.name ?? admin?.fullName ?? admin?.username ?? admin?.email ?? "Administrador";
         if (mounted) setName(String(display));
       } catch {
@@ -40,7 +39,9 @@ export function Header({ adminName = "Admin" }: HeaderProps) {
   async function handleLogoutConfirm() {
     setLogoutLoading(true);
     try {
-      await api.post("/admin/logout");
+      if (supabase) {
+        await supabase.auth.signOut();
+      }
     } catch {
     } finally {
       setLogoutLoading(false);

@@ -4,9 +4,8 @@ import React, { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import api from "@/services/api";
 import { useRouter } from "@/lib/router";
-import axios from "axios";
+import { invokeFunction } from "@/services/api";
 import { Eye, EyeClosed } from "lucide-react";
 
 type Props = { email?: string; adminId?: string };
@@ -76,17 +75,12 @@ export default function ResetPasswordForm({ email, adminId }: Props) {
 
     try {
       setLoadingVerify(true);
-      await api.post("/admin/password/verify", payload);
+      await invokeFunction("users-verify-reset-pin", { method: 'POST', body: payload });
       setVerified(true);
       setSuccess("Código verificado. Você pode escolher a nova senha.");
     } catch (err: unknown) {
       let message = "Erro ao verificar código.";
-      if (axios.isAxiosError(err)) {
-        const data = err.response?.data as ApiErrorResponse | undefined;
-        const serverMsg = data?.message ?? data?.error ?? (data ? JSON.stringify(data) : undefined);
-        message = serverMsg ?? err.message ?? message;
-        if (err.response?.status) message = `${message} (${err.response?.status})`;
-      } else if (err instanceof Error) {
+      if (err instanceof Error) {
         message = err.message;
       }
       setError(message);
@@ -132,17 +126,12 @@ export default function ResetPasswordForm({ email, adminId }: Props) {
 
     try {
       setLoadingReset(true);
-      await api.post("/admin/password/reset", payload);
+      await invokeFunction("users-reset-password", { method: 'POST', body: payload });
       setSuccess("Senha alterada com sucesso. Redirecionando...");
       setTimeout(() => router.push("/"), 900);
     } catch (err: unknown) {
       let message = "Erro ao alterar senha.";
-      if (axios.isAxiosError(err)) {
-        const data = err.response?.data as ApiErrorResponse | undefined;
-        const serverMsg = data?.message ?? data?.error ?? (data ? JSON.stringify(data) : undefined);
-        message = serverMsg ?? err.message ?? message;
-        if (err.response?.status) message = `${message} (${err.response?.status})`;
-      } else if (err instanceof Error) {
+      if (err instanceof Error) {
         message = err.message;
       }
       setError(message);
@@ -173,16 +162,11 @@ export default function ResetPasswordForm({ email, adminId }: Props) {
 
     try {
       setLoadingVerify(true);
-      await api.post("/admin/password/forgot", payload);
+      await invokeFunction("users-forgot-password", { method: 'POST', body: payload });
       setSuccess("Código reenviado. Verifique seu e‑mail.");
     } catch (err: unknown) {
       let message = "Erro ao reenviar código.";
-      if (axios.isAxiosError(err)) {
-        const data = err.response?.data as ApiErrorResponse | undefined;
-        const serverMsg = data?.message ?? data?.error ?? (data ? JSON.stringify(data) : undefined);
-        message = serverMsg ?? err.message ?? message;
-        if (err.response?.status) message = `${message} (${err.response?.status})`;
-      } else if (err instanceof Error) {
+      if (err instanceof Error) {
         message = err.message;
       }
       setError(message);

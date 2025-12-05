@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "@/components/router/Link";
 import { useRouter } from "@/lib/router";
-import api from "@/services/api";
+import { invokeFunction } from "@/services/api";
 import axios from "axios";
 import { Eye, EyeClosed } from "lucide-react";
 
@@ -54,21 +54,24 @@ export function RegisterForm() {
     try {
       setLoading(true);
 
-      const res = await api.post("/admin/register", {
-        name,
-        email,
-        password: pw,
-        confirmPassword,
+      const res = await invokeFunction<{ id?: number; adminId?: number; admin?: { id: number } }>("register", {
+        method: 'POST',
+        body: {
+          name,
+          email,
+          password: pw,
+          confirmPassword,
+        }
       });
 
-      const rawId = res.data?.id ?? res.data?.adminId ?? res.data?.admin?.id;
+      const rawId = res.id ?? res.adminId ?? res.admin?.id;
       const adminId = rawId != null ? Number(rawId) : undefined;
 
       try {
         if (!Number.isNaN(adminId)) {
-          await api.post("/admin/pin/send", { adminId, via: "email" });
+          await invokeFunction("send-pin", { method: 'POST', body: { adminId, via: "email" } });
         } else {
-          await api.post("/admin/pin/send", { email, via: "email" });
+          await invokeFunction("send-pin", { method: 'POST', body: { email, via: "email" } });
         }
       } catch {
       }
@@ -79,10 +82,7 @@ export function RegisterForm() {
       router.push(`/verify?${q.toString()}`);
     } catch (err: unknown) {
       let message = "Erro ao criar conta";
-      if (axios.isAxiosError(err)) {
-        const data = err.response?.data as { message?: string } | undefined;
-        message = data?.message ?? err.message ?? message;
-      } else if (err instanceof Error) {
+      if (err instanceof Error) {
         message = err.message;
       } else if (typeof err === "string") {
         message = err;

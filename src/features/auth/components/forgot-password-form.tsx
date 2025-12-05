@@ -5,8 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useRouter } from "@/lib/router";
-import api from "@/services/api";
-import axios from "axios";
+import { invokeFunction } from "@/services/api";
 
 type ApiErrorResponse = { message?: string; error?: string } & Record<string, unknown>;
 
@@ -29,19 +28,13 @@ export default function ForgotPasswordForm() {
 
     try {
       setLoading(true);
-      await api.post("/admin/password/forgot", { email: value });
+      await invokeFunction("users-forgot-password", { method: 'POST', body: { email: value } });
       setSuccess("Código enviado. Verifique seu e‑mail.");
       const q = new URLSearchParams({ email: value });
       setTimeout(() => router.push(`/reset-password?${q.toString()}`), 900);
     } catch (err: unknown) {
       let message = "Erro ao enviar código.";
-      if (axios.isAxiosError(err)) {
-        const status = err.response?.status;
-        const data = err.response?.data as ApiErrorResponse | undefined;
-        const serverMsg = data?.message ?? data?.error ?? (data ? JSON.stringify(data) : undefined);
-        message = serverMsg ?? err.message ?? message;
-        if (status) message = `${message} (${status})`;
-      } else if (err instanceof Error) {
+      if (err instanceof Error) {
         message = err.message;
       }
       setError(message);
