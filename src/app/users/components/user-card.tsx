@@ -6,8 +6,8 @@ import Image from "@/components/ui/Image";
 import { Button } from "@/components/ui/button";
 import Modal from "@/components/ui/Modal";
 import { cn } from "@/lib/utils";
-import type { UserCardUser } from "../types";
-import { STATUS_META } from "../visuals";
+import type { UserCardUser } from "@/types/users";
+import { STATUS_META } from "../utils/visuals";
 
 const MAX_DESCRIPTION_LENGTH = 80;
 const DEFAULT_DESCRIPTION = "Este usuário ainda não adicionou uma bio.";
@@ -21,7 +21,14 @@ type UserCardProps = {
   isUnbanning?: boolean;
 };
 
-export function UserCard({ user, onBan, onUnban, onViewProfile, isBanning = false, isUnbanning = false }: UserCardProps) {
+export function UserCard({
+  user,
+  onBan,
+  onUnban,
+  onViewProfile,
+  isBanning = false,
+  isUnbanning = false,
+}: UserCardProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState<"ban" | "unban" | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -143,7 +150,7 @@ export function UserCard({ user, onBan, onUnban, onViewProfile, isBanning = fals
                   onClick={openBanConfirm}
                   className={cn(
                     "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[#C53030] hover:bg-[#FFF2F2]",
-                    isBanDisabled && "cursor-not-allowed opacity-60 hover:bg-transparent"
+                    isBanDisabled && "cursor-not-allowed opacity-60 hover:bg-transparent",
                   )}
                 >
                   {banLabel}
@@ -156,7 +163,7 @@ export function UserCard({ user, onBan, onUnban, onViewProfile, isBanning = fals
                   onClick={openUnbanConfirm}
                   className={cn(
                     "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[#256740] hover:bg-[#E5F4ED]",
-                    isUnbanDisabled && "cursor-not-allowed opacity-60 hover:bg-transparent"
+                    isUnbanDisabled && "cursor-not-allowed opacity-60 hover:bg-transparent",
                   )}
                 >
                   {unbanLabel}
@@ -170,7 +177,7 @@ export function UserCard({ user, onBan, onUnban, onViewProfile, isBanning = fals
       <div
         className={cn(
           "absolute left-5 top-4 z-10 flex h-20 w-20 items-center justify-center overflow-hidden border-[3px] rounded-[18px]",
-          hasAvatar ? "bg-white/80" : "bg-[#F4F6FF]"
+          hasAvatar ? "bg-white/80" : "bg-[#F4F6FF]",
         )}
         style={{
           borderColor: hasAvatar ? meta.avatarBorder : "#D0D9F1",
@@ -192,10 +199,7 @@ export function UserCard({ user, onBan, onUnban, onViewProfile, isBanning = fals
 
       <div className="relative z-10 flex flex-1 flex-col px-5 pb-4 pt-[7.25rem]">
         <div className="space-y-1">
-          <h3
-            className="text-[15px] font-semibold leading-tight"
-            style={{ color: meta.nameColor }}
-          >
+          <h3 className="text-[15px] font-semibold leading-tight" style={{ color: meta.nameColor }}>
             {user.name}
           </h3>
           <p className="text-sm font-medium" style={{ color: meta.handleColor }}>
@@ -212,7 +216,11 @@ export function UserCard({ user, onBan, onUnban, onViewProfile, isBanning = fals
             type="button"
             variant="ghost"
             className="h-11 w-full rounded-[14px] border text-sm font-semibold transition-transform duration-150 hover:-translate-y-0.5 hover:bg-transparent hover:text-current focus-visible:ring-white/60 focus-visible:ring-offset-0"
-            style={{ background: meta.buttonGradient, color: "#FFFFFF", borderColor: meta.buttonBorder }}
+            style={{
+              background: meta.buttonGradient,
+              color: "#FFFFFF",
+              borderColor: meta.buttonBorder,
+            }}
             onClick={() => onViewProfile?.(user.id)}
           >
             Ver perfil

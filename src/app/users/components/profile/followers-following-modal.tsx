@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Modal from "@/components/ui/Modal";
 import Image from "@/components/ui/Image";
 import { Button } from "@/components/ui/button";
-import type { UserCardUser } from "../../types";
+import type { UserCardUser } from "@/types/users";
 
 type TabKey = "followers" | "following";
 
@@ -72,7 +72,7 @@ function asLoaderObject(result: LoaderResult): LoaderResultObject {
   return {};
 }
 
-export default function FollowersFollowingModal({
+export function FollowersFollowingModal({
   open,
   onClose,
   userId,
@@ -110,8 +110,7 @@ export default function FollowersFollowingModal({
 
   const loadTabData = useCallback(
     async (targetTab: TabKey, pageToLoad: number, reset: boolean) => {
-      const loader =
-        targetTab === "followers" ? fetchFollowers : fetchFollowing;
+      const loader = targetTab === "followers" ? fetchFollowers : fetchFollowing;
 
       if (typeof loader !== "function") {
         setDataByTab((prev) => {
@@ -154,14 +153,12 @@ export default function FollowersFollowingModal({
             : ITEM_PAGE_SIZE;
         const hasMoreFlag =
           typeof normalized.hasMore === "boolean" ? normalized.hasMore : undefined;
-        const incomingTotal =
-          typeof normalized.total === "number" ? normalized.total : null;
+        const incomingTotal = typeof normalized.total === "number" ? normalized.total : null;
 
         setDataByTab((prev) => {
           const current = prev[targetTab];
           const mergedItems = reset ? received : [...current.items, ...received];
-          const effectiveTotal =
-            incomingTotal !== null ? incomingTotal : current.total;
+          const effectiveTotal = incomingTotal !== null ? incomingTotal : current.total;
           const derivedHasMore =
             hasMoreFlag !== undefined
               ? hasMoreFlag
@@ -300,24 +297,18 @@ export default function FollowersFollowingModal({
             </div>
           )}
 
-          {activeState.items.length === 0 &&
-            !activeState.loading &&
-            activeState.error && (
-              <div className="space-y-3 rounded-lg border border-[#FCE8E8] bg-[#FFF6F6] p-4">
-                <p className="text-sm text-[#C53030]">{activeState.error}</p>
-                <Button onClick={handleRetry} size="sm" variant="outline">
-                  Tentar novamente
-                </Button>
-              </div>
-            )}
+          {activeState.items.length === 0 && !activeState.loading && activeState.error && (
+            <div className="space-y-3 rounded-lg border border-[#FCE8E8] bg-[#FFF6F6] p-4">
+              <p className="text-sm text-[#C53030]">{activeState.error}</p>
+              <Button onClick={handleRetry} size="sm" variant="outline">
+                Tentar novamente
+              </Button>
+            </div>
+          )}
 
-          {activeState.items.length === 0 &&
-            !activeState.loading &&
-            !activeState.error && (
-              <div className="text-sm text-center text-[#5A6480]">
-                {activeTabConfig.emptyMessage}
-              </div>
-            )}
+          {activeState.items.length === 0 && !activeState.loading && !activeState.error && (
+            <div className="text-sm text-center text-[#5A6480]">{activeTabConfig.emptyMessage}</div>
+          )}
 
           {activeState.items.map((user) => (
             <div
@@ -341,9 +332,7 @@ export default function FollowersFollowingModal({
                   )}
                 </div>
                 <div className="text-left">
-                  <div className="text-sm font-semibold text-[#2B1F58]">
-                    {user.name}
-                  </div>
+                  <div className="text-sm font-semibold text-[#2B1F58]">{user.name}</div>
                   <div className="text-xs text-[#5A6480]">
                     {user.codename
                       ? `@${user.codename.replace(/^@/, "")}`
@@ -372,11 +361,7 @@ export default function FollowersFollowingModal({
         <div className="flex items-center justify-between">
           <div className="text-xs text-[#8A94AB]">{countLabel}</div>
           {activeState.hasMore && activeState.items.length > 0 && (
-            <Button
-              onClick={handleLoadMore}
-              size="sm"
-              disabled={activeState.loading}
-            >
+            <Button onClick={handleLoadMore} size="sm" disabled={activeState.loading}>
               {activeState.loading ? "Carregando..." : "Carregar mais"}
             </Button>
           )}

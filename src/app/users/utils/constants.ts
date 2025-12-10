@@ -1,4 +1,4 @@
-import type { BanReasonKey } from "./types";
+import type { BanReasonKey } from "@/types/users";
 
 export const USER_JUSTIFICATION_LIMIT = 150;
 

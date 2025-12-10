@@ -2,8 +2,8 @@ import React, { useEffect, useState } from "react";
 import Modal from "@/components/ui/Modal";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import type { BanReasonKey } from "../types";
-import { BAN_REASON_OPTIONS, USER_JUSTIFICATION_LIMIT } from "../constants";
+import type { BanReasonKey } from "@/types/users";
+import { BAN_REASON_OPTIONS, USER_JUSTIFICATION_LIMIT } from "../utils/constants";
 
 type Props = {
   open: boolean;
@@ -15,7 +15,7 @@ type Props = {
 type Errors = { reason?: string; description?: string };
 const defaultReason: BanReasonKey = BAN_REASON_OPTIONS[0]?.key ?? "outro";
 
-const BanUserModal: React.FC<Props> = ({ open, pending, onClose, onConfirm }) => {
+export const BanUserModal: React.FC<Props> = ({ open, pending, onClose, onConfirm }) => {
   const [reason, setReason] = useState<BanReasonKey>(defaultReason);
   const [description, setDescription] = useState("");
   const [errors, setErrors] = useState<Errors>({});
@@ -64,7 +64,7 @@ const BanUserModal: React.FC<Props> = ({ open, pending, onClose, onConfirm }) =>
             disabled={pending}
             className={cn(
               "h-11 min-w-[160px] rounded-[12px] px-6 text-sm font-semibold transition-colors disabled:opacity-70",
-              "border-[#D0D9F1] text-[#1F2A44] hover:bg-[#F4F6FF]"
+              "border-[#D0D9F1] text-[#1F2A44] hover:bg-[#F4F6FF]",
             )}
           >
             Cancelar
@@ -74,7 +74,7 @@ const BanUserModal: React.FC<Props> = ({ open, pending, onClose, onConfirm }) =>
             disabled={confirmDisabled}
             className={cn(
               "h-11 min-w-[160px] rounded-[12px] px-6 text-sm font-semibold transition-colors disabled:opacity-70",
-              "bg-[#C53030] text-white hover:bg-[#A22727]"
+              "bg-[#C53030] text-white hover:bg-[#A22727]",
             )}
           >
             {pending ? "Processando..." : "Banir usuário"}
@@ -94,7 +94,9 @@ const BanUserModal: React.FC<Props> = ({ open, pending, onClose, onConfirm }) =>
                 key={option.key}
                 className={cn(
                   "flex items-center gap-3 rounded-xl border px-4 py-3 text-sm font-medium text-[#2B1F58] transition-colors",
-                  selected ? "border-[#977CEC] bg-[#F3F0FF]" : "border-[#E2E8F8] hover:border-[#C4CEEE]"
+                  selected
+                    ? "border-[#977CEC] bg-[#F3F0FF]"
+                    : "border-[#E2E8F8] hover:border-[#C4CEEE]",
                 )}
               >
                 <input
@@ -123,7 +125,7 @@ const BanUserModal: React.FC<Props> = ({ open, pending, onClose, onConfirm }) =>
         <div
           className={cn(
             "rounded-xl border px-4 py-3",
-            errors.description ? "border-[#F5C2C7]" : "border-[#D5DDF5]"
+            errors.description ? "border-[#F5C2C7]" : "border-[#D5DDF5]",
           )}
         >
           <textarea
@@ -154,5 +156,3 @@ const BanUserModal: React.FC<Props> = ({ open, pending, onClose, onConfirm }) =>
     </Modal>
   );
 };
-
-export default BanUserModal;

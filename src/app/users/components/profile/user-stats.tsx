@@ -16,7 +16,7 @@ type StatItem = {
   onPress?: () => void;
 };
 
-const UserStats: React.FC<Props> = ({
+export const UserStats: React.FC<Props> = ({
   followingCount,
   followersCount,
   reportsTotal,
@@ -30,10 +30,7 @@ const UserStats: React.FC<Props> = ({
     { key: "reports", label: "Denúncias", value: reportsTotal, onPress: onOpenReports },
   ];
 
-  const handleKeyDown = (
-    event: KeyboardEvent<HTMLDivElement>,
-    handler?: () => void,
-  ) => {
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>, handler?: () => void) => {
     if (!handler) return;
     if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
@@ -73,5 +70,3 @@ const UserStats: React.FC<Props> = ({
     </section>
   );
 };
-
-export default UserStats;

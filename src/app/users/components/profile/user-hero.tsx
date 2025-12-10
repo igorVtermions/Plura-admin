@@ -4,9 +4,9 @@ import { User as UserIcon } from "lucide-react";
 import Image from "@/components/ui/Image";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import type { UserProfile } from "../../types";
-import { STATUS_META } from "../../visuals";
-import { formatProfileTopic } from "../../profile-formatters";
+import type { UserProfile } from "@/types/users";
+import { STATUS_META } from "../../utils/visuals";
+import { formatProfileTopic } from "../../utils/profile-formatters";
 
 type StatusMeta = (typeof STATUS_META)[keyof typeof STATUS_META];
 
@@ -20,7 +20,7 @@ type Props = {
   pendingAction: boolean;
 };
 
-const UserHero: React.FC<Props> = ({
+export const UserHero: React.FC<Props> = ({
   profile,
   statusMeta,
   isBanned,
@@ -39,7 +39,7 @@ const UserHero: React.FC<Props> = ({
         <div
           className={cn(
             "relative -mt-28 flex h-[168px] w-[168px] items-center justify-center overflow-hidden border-[4px] rounded-full",
-            profile.avatarUrl ? "bg-white/80" : "bg-[#F4F6FF]"
+            profile.avatarUrl ? "bg-white/80" : "bg-[#F4F6FF]",
           )}
           style={{
             borderColor: profile.avatarUrl ? statusMeta.avatarBorder : "#D0D9F1",
@@ -112,7 +112,7 @@ const UserHero: React.FC<Props> = ({
             disabled={pendingAction}
             className={cn(
               "h-11 rounded-[12px] px-6 text-sm font-semibold transition-colors disabled:opacity-70",
-              actionButtonClasses
+              actionButtonClasses,
             )}
             onClick={onPrimaryActionClick}
           >
@@ -137,5 +137,3 @@ const UserHero: React.FC<Props> = ({
     </div>
   );
 };
-
-export default UserHero;

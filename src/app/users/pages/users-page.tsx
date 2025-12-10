@@ -8,8 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { UserCard } from "../components/user-card";
-import type { UserCardUser, UserStatus } from "../types";
-import { banUser, fetchUsers, unbanUser } from "@/features/users/api";
+import type { UserCardUser, UserStatus } from "@/types/users";
+import { banUser, fetchUsers, unbanUser } from "@/services/users";
 import { useNavigate } from "react-router-dom";
 
 type FilterKey = UserStatus | "all";
@@ -29,7 +29,7 @@ type MetaState = {
   totalPages: number;
 };
 
-export default function UsersPage() {
+export function UsersPage() {
   const navigate = useNavigate();
   const [filter, setFilter] = useState<FilterKey>("all");
   const [searchInput, setSearchInput] = useState("");
@@ -336,9 +336,13 @@ function Pagination({
               onClick={() => goPage(p)}
               className={cn(
                 "flex h-10 w-10 items-center justify-center rounded-md border bg-white text-sm font-medium md:h-12 md:w-12",
-                disabled && "cursor-not-allowed opacity-70"
+                disabled && "cursor-not-allowed opacity-70",
               )}
-              style={{ borderColor: "#D0D9F1", color: p === page ? "#191F33" : "#7682A5", minWidth: 44 }}
+              style={{
+                borderColor: "#D0D9F1",
+                color: p === page ? "#191F33" : "#7682A5",
+                minWidth: 44,
+              }}
             >
               {p}
             </button>
@@ -378,9 +382,7 @@ function Pagination({
 function adaptUser(raw: unknown): UserCardUser | null {
   if (!raw || typeof raw !== "object") return null;
   const data = raw as Record<string, unknown>;
-
-  const idValue = data.id ?? data.userId ?? data["_id"];
-  const id = typeof idValue === "string" || typeof idValue === "number" ? String(idValue) : null;
+  const id = String(data.id);
   if (!id) return null;
 
   const nameValue = data.name ?? data.fullName ?? data.displayName;

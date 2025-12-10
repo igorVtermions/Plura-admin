@@ -1,9 +1,9 @@
 // src/features/users/components/profile/UserActivitySection.tsx
 import React from "react";
 import { Button } from "@/components/ui/button";
-import type { UserProfileActivity } from "../../types";
-import { EndedRoomCard } from "@/features/home/components/ended-room-card";
-import { formatDateTime, formatDuration } from "../../profile-formatters";
+import type { UserProfileActivity } from "@/types/users";
+import { EndedRoomCard } from "@/app/home/components/ended-room-card";
+import { formatDateTime, formatDuration } from "../../utils/profile-formatters";
 
 type Props = {
   liveHistory: UserProfileActivity[];
@@ -12,7 +12,12 @@ type Props = {
   finishedTotal?: number;
 };
 
-const UserActivitySection: React.FC<Props> = ({ liveHistory, liveHistoryTotal, finishedSessions, finishedTotal }) => (
+export const UserActivitySection: React.FC<Props> = ({
+  liveHistory,
+  liveHistoryTotal,
+  finishedSessions,
+  finishedTotal,
+}) => (
   <section className="mt-10 space-y-6">
     <header className="flex items-center justify-between">
       <h2 className="text-lg font-semibold text-[#191F33]">Atividade</h2>
@@ -33,7 +38,8 @@ const UserActivitySection: React.FC<Props> = ({ liveHistory, liveHistoryTotal, f
               : String(item.topic ?? "Sala");
           const startAt = item.startAt ?? item.startedAt ?? null;
           const endAt = item.actualEndAt ?? item.endAt ?? item.endTime ?? null;
-          const tutorName = item.tutor && typeof item.tutor === "object" ? item.tutor.name ?? "" : "";
+          const tutorName =
+            item.tutor && typeof item.tutor === "object" ? item.tutor.name ?? "" : "";
 
           return (
             <EndedRoomCard
@@ -58,7 +64,9 @@ const UserActivitySection: React.FC<Props> = ({ liveHistory, liveHistoryTotal, f
           const duration = formatDuration(session.durationMinutes);
           const participants =
             typeof session.participantsCount === "number"
-              ? `${session.participantsCount} participante${session.participantsCount === 1 ? "" : "s"}`
+              ? `${session.participantsCount} participante${
+                  session.participantsCount === 1 ? "" : "s"
+                }`
               : "Participantes não informados";
 
           return (
@@ -90,5 +98,3 @@ const UserActivitySection: React.FC<Props> = ({ liveHistory, liveHistoryTotal, f
     </div>
   </section>
 );
-
-export default UserActivitySection;

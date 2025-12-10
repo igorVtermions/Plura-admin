@@ -1,5 +1,4 @@
-// src/features/users/visuals.ts
-import type { UserStatus } from "./types";
+import type { UserStatus } from "@/types/users";
 
 export type StatusVisualMeta = {
   headerColor: string;

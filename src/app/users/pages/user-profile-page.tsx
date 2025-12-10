@@ -5,25 +5,39 @@ import { useNavigate, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import axios from "axios";
-import BanUserModal from "../components/BanUserModal";
-import UnbanUserModal from "../components/UnbanUserModal";
-import UserHero from "../components/profile/UserHero";
-import UserStats from "../components/profile/UserStats";
-import UserActivitySection from "../components/profile/UserActivitySection";
-import UserDetailsModal from "../components/profile/UserDetailsModal";
-import FollowersFollowingModal from "../components/profile/FollowersFollowingModal";
-import UserReportsModal from "../components/profile/UserReportsModal";
-import { STATUS_META } from "../visuals";
-import type { BanReasonKey, UserProfile } from "../types";
+import { BanUserModal } from "../components/ban-user-modal";
+import { UnbanUserModal } from "../components/unban-user-modal";
+import { UserHero } from "../components/profile/user-hero";
+import { UserStats } from "../components/profile/user-stats";
+import { UserActivitySection } from "../components/profile/user-activity-section";
+import { UserDetailsModal } from "../components/profile/user-details-modal";
+import { FollowersFollowingModal } from "../components/profile/followers-following-modal";
+import { UserReportsModal } from "../components/profile/user-reports-modal";
+import { STATUS_META } from "../utils/visuals";
+import type { BanReasonKey, UserProfile } from "@/types/users";
 import {
   banUser,
   fetchFollowers as apiFetchFollowers,
   fetchFollowing as apiFetchFollowing,
   fetchUserProfile,
   unbanUser,
-} from "../api";
-import { fetchUserSessionsAdmin } from "../api";
+} from "@/services/users";
+import { fetchUserSessionsAdmin } from "@/services/users";
+
+function extractErrorMessage(err: unknown, fallback: string) {
+  if (typeof err === "string") return err;
+  if (err instanceof Error && err.message) return err.message;
+  if (err && typeof err === "object") {
+    const response = (err as { response?: { data?: unknown } }).response;
+    const data = response?.data;
+    if (data && typeof data === "object") {
+      const record = data as Record<string, unknown>;
+      if (typeof record.message === "string") return record.message;
+      if (typeof record.error === "string") return record.error;
+    }
+  }
+  return fallback;
+}
 
 type ConfirmAction = "ban" | "unban" | null;
 const FOLLOW_PAGE_SIZE = 20;
@@ -35,19 +49,15 @@ function normalizeProfile(payload: unknown): UserProfile | null {
   if (!user || typeof user !== "object") return null;
 
   const idValue = user.id ?? user.userId ?? user["_id"];
-  const id =
-    typeof idValue === "string" || typeof idValue === "number" ? String(idValue) : null;
+  const id = typeof idValue === "string" || typeof idValue === "number" ? String(idValue) : null;
   if (!id) return null;
 
   const nameValue = user.name ?? user.fullName ?? user.displayName;
   const name =
-    typeof nameValue === "string" && nameValue.trim().length > 0
-      ? nameValue
-      : "Usuário sem nome";
+    typeof nameValue === "string" && nameValue.trim().length > 0 ? nameValue : "Usuário sem nome";
 
   const statusRaw = typeof user.status === "string" ? user.status.toLowerCase() : "";
-  const status =
-    statusRaw === "active" ? "active" : statusRaw === "banned" ? "banned" : "pending";
+  const status = statusRaw === "active" ? "active" : statusRaw === "banned" ? "banned" : "pending";
 
   const bio =
     typeof user.bio === "string"
@@ -69,9 +79,7 @@ function normalizeProfile(payload: unknown): UserProfile | null {
 
   const topicsRaw = user.topics;
   const topics = Array.isArray(topicsRaw)
-    ? topicsRaw
-        .map((topic) => (typeof topic === "string" ? topic.trim() : ""))
-        .filter(Boolean)
+    ? topicsRaw.map((topic) => (typeof topic === "string" ? topic.trim() : "")).filter(Boolean)
     : [];
 
   const reportsBlock = (data.reports ?? user.reports) as Record<string, unknown> | undefined;
@@ -115,10 +123,9 @@ function normalizeProfile(payload: unknown): UserProfile | null {
     })
     .filter((item): item is NonNullable<typeof item> => item !== null);
 
-  const liveBlock =
-    (data.liveChatHistory ?? user.liveChatHistory ?? user.liveHistory) as
-      | Record<string, unknown>
-      | undefined;
+  const liveBlock = (data.liveChatHistory ?? user.liveChatHistory ?? user.liveHistory) as
+    | Record<string, unknown>
+    | undefined;
   const liveListRaw = liveBlock?.list ?? liveBlock?.items ?? liveBlock;
   const liveArray = Array.isArray(liveListRaw) ? liveListRaw : [];
   const liveHistory = liveArray
@@ -127,9 +134,7 @@ function normalizeProfile(payload: unknown): UserProfile | null {
       const cast = item as Record<string, unknown>;
       const sessionId = cast.id ?? cast.sessionId ?? cast.roomId ?? cast["_id"];
       const resolvedId =
-        typeof sessionId === "string" || typeof sessionId === "number"
-          ? String(sessionId)
-          : null;
+        typeof sessionId === "string" || typeof sessionId === "number" ? String(sessionId) : null;
       if (!resolvedId) return null;
 
       const startedAt =
@@ -223,7 +228,12 @@ function normalizeProfile(payload: unknown): UserProfile | null {
         : typeof user.subscription === "string"
         ? user.subscription
         : null,
-    codename: typeof user.codinome === "string" ? user.codinome : user.codename,
+    codename:
+      typeof user.codinome === "string"
+        ? user.codinome
+        : typeof user.codename === "string"
+        ? user.codename
+        : null,
     email: typeof user.email === "string" ? user.email : null,
     phone: typeof user.phone === "string" ? user.phone : null,
     bio,
@@ -239,7 +249,7 @@ function normalizeProfile(payload: unknown): UserProfile | null {
   };
 }
 
-export default function UserProfilePage() {
+export function UserProfilePage() {
   const { userId } = useParams();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -249,7 +259,9 @@ export default function UserProfilePage() {
   const [pendingAction, setPendingAction] = useState(false);
   const [viewDataOpen, setViewDataOpen] = useState(false);
   const [reportsModalOpen, setReportsModalOpen] = useState(false);
-  const [finishedSessions, setFinishedSessions] = useState<Array<Record<string, unknown>> | null>(null);
+  const [finishedSessions, setFinishedSessions] = useState<Array<Record<string, unknown>> | null>(
+    null,
+  );
 
   const [followModalOpen, setFollowModalOpen] = useState(false);
   const [followModalTab, setFollowModalTab] = useState<"followers" | "following">("followers");
@@ -262,7 +274,7 @@ export default function UserProfilePage() {
       setLoading(true);
       setError(null);
       try {
-        const payload = await fetchUserProfile(userId);
+        const payload = await fetchUserProfile(userId ?? "");
         const normalized = normalizeProfile(payload);
         if (cancelled) return;
         if (!normalized) {
@@ -273,10 +285,11 @@ export default function UserProfilePage() {
         setProfile(normalized);
         // try to fetch finished sessions (admin endpoint)
         try {
-          const sessionsResp = await fetchUserSessionsAdmin(userId);
+          const sessionsResp = await fetchUserSessionsAdmin(userId ?? "");
           if (!cancelled && sessionsResp && typeof sessionsResp === "object") {
             // expect { items: [...] }
-            const items = (sessionsResp.items && Array.isArray(sessionsResp.items)) ? sessionsResp.items : [];
+            const items =
+              sessionsResp.items && Array.isArray(sessionsResp.items) ? sessionsResp.items : [];
             setFinishedSessions(items as Array<Record<string, unknown>>);
           }
         } catch (err) {
@@ -320,14 +333,7 @@ export default function UserProfilePage() {
     } catch (err) {
       console.error("banUser error", err);
       const defaultError = "Não foi possível banir o usuário.";
-      if (axios.isAxiosError(err)) {
-        const data = err.response?.data as { message?: string; error?: string } | undefined;
-        toast.error(data?.message ?? data?.error ?? err.message ?? defaultError);
-      } else if (err instanceof Error) {
-        toast.error(err.message ?? defaultError);
-      } else {
-        toast.error(defaultError);
-      }
+      toast.error(extractErrorMessage(err, defaultError));
     } finally {
       setPendingAction(false);
     }
@@ -344,14 +350,7 @@ export default function UserProfilePage() {
     } catch (err) {
       console.error("unbanUser error", err);
       const defaultError = "Não foi possível desbanir o usuário.";
-      if (axios.isAxiosError(err)) {
-        const data = err.response?.data as { message?: string; error?: string } | undefined;
-        toast.error(data?.message ?? data?.error ?? err.message ?? defaultError);
-      } else if (err instanceof Error) {
-        toast.error(err.message ?? defaultError);
-      } else {
-        toast.error(defaultError);
-      }
+      toast.error(extractErrorMessage(err, defaultError));
     } finally {
       setPendingAction(false);
     }
@@ -374,11 +373,15 @@ export default function UserProfilePage() {
     setReportsModalOpen(true);
   };
 
-  const fetchFollowers = async (uid: string, page = 1) =>
-    apiFetchFollowers(uid, { page, perPage: FOLLOW_PAGE_SIZE });
+  const fetchFollowers = async (uid: string, page = 1) => {
+    const result = await apiFetchFollowers(uid, { page, perPage: FOLLOW_PAGE_SIZE });
+    return { ...result, total: result.total ?? undefined };
+  };
 
-  const fetchFollowing = async (uid: string, page = 1) =>
-    apiFetchFollowing(uid, { page, perPage: FOLLOW_PAGE_SIZE });
+  const fetchFollowing = async (uid: string, page = 1) => {
+    const result = await apiFetchFollowing(uid, { page, perPage: FOLLOW_PAGE_SIZE });
+    return { ...result, total: result.total ?? undefined };
+  };
 
   if (loading) {
     return (
@@ -445,12 +448,12 @@ export default function UserProfilePage() {
           </article>
 
           <section className="mt-10">
-              <UserActivitySection
-                liveHistory={profile.liveHistory}
-                liveHistoryTotal={profile.liveHistoryTotal}
-                finishedSessions={finishedSessions ?? undefined}
-                finishedTotal={finishedSessions ? finishedSessions.length : undefined}
-              />
+            <UserActivitySection
+              liveHistory={profile.liveHistory}
+              liveHistoryTotal={profile.liveHistoryTotal}
+              finishedSessions={finishedSessions ?? undefined}
+              finishedTotal={finishedSessions ? finishedSessions.length : undefined}
+            />
           </section>
         </div>
       </div>

@@ -1,5 +1,4 @@
-import axios from "axios";
-import api from "@/services/api";
+import api, { invokeFunction } from "@/services/api";
 import type {
   BanUserPayload,
   BanUserResponse,
@@ -9,7 +8,7 @@ import type {
   UserListResponse,
   UserProfileResponse,
   UserStatus,
-} from "./types";
+} from "@/types/users";
 
 const DEFAULT_BAN_PAYLOAD: BanUserPayload = {
   reason: "outro",
@@ -41,8 +40,7 @@ function normalizeListResponse(payload: unknown): UserListResponse {
 }
 
 function resolveStatus(value: unknown): UserStatus {
-  const normalized =
-    typeof value === "string" ? value.trim().toLowerCase() : "";
+  const normalized = typeof value === "string" ? value.trim().toLowerCase() : "";
   if (normalized === "active" || normalized === "banned") return normalized;
   return "pending";
 }
@@ -76,27 +74,16 @@ function normalizeFollowUser(raw: unknown): UserCardUser | null {
 
   const data = raw as Record<string, unknown>;
   const base =
-    data.user && typeof data.user === "object"
-      ? (data.user as Record<string, unknown>)
-      : data;
+    data.user && typeof data.user === "object" ? (data.user as Record<string, unknown>) : data;
 
-  const idValue =
-    base.id ??
-    base.userId ??
-    base._id ??
-    data.followingId ??
-    data.followerId ??
-    null;
+  const idValue = base.id ?? base.userId ?? base._id ?? data.followingId ?? data.followerId ?? null;
 
   if (typeof idValue !== "string" && typeof idValue !== "number") return null;
 
-  const nameValue =
-    base.name ?? base.fullName ?? base.displayName ?? base.username;
+  const nameValue = base.name ?? base.fullName ?? base.displayName ?? base.username;
 
   const name =
-    typeof nameValue === "string" && nameValue.trim().length > 0
-      ? nameValue.trim()
-      : "Usuário";
+    typeof nameValue === "string" && nameValue.trim().length > 0 ? nameValue.trim() : "Usuário";
 
   const codenameValue =
     typeof base.codename === "string"
@@ -129,10 +116,8 @@ function normalizeFollowUser(raw: unknown): UserCardUser | null {
       ? base.createdAt
       : null;
 
-  const loginAttempts =
-    typeof base.loginAttempts === "number" ? base.loginAttempts : 0;
-  const lockedUntil =
-    typeof base.lockedUntil === "string" ? base.lockedUntil : null;
+  const loginAttempts = typeof base.loginAttempts === "number" ? base.loginAttempts : 0;
+  const lockedUntil = typeof base.lockedUntil === "string" ? base.lockedUntil : null;
 
   const isVerified =
     typeof base.isVerified === "boolean"
@@ -162,10 +147,7 @@ function mapFollowResponse(
   key: "followers" | "following",
   params?: FollowParams,
 ): FollowListResult {
-  const data =
-    payload && typeof payload === "object"
-      ? (payload as Record<string, unknown>)
-      : {};
+  const data = payload && typeof payload === "object" ? (payload as Record<string, unknown>) : {};
 
   const rawItems = extractArray(data, key);
   const items = rawItems
@@ -173,9 +155,7 @@ function mapFollowResponse(
     .filter((user): user is UserCardUser => user !== null);
 
   const meta =
-    data.meta && typeof data.meta === "object"
-      ? (data.meta as Record<string, unknown>)
-      : undefined;
+    data.meta && typeof data.meta === "object" ? (data.meta as Record<string, unknown>) : undefined;
 
   const total = extractNumber(
     data.count,
@@ -186,11 +166,9 @@ function mapFollowResponse(
   );
 
   const pageSize =
-    extractNumber(meta?.perPage, data.perPage, params?.perPage) ??
-    FOLLOW_DEFAULT_PAGE_SIZE;
+    extractNumber(meta?.perPage, data.perPage, params?.perPage) ?? FOLLOW_DEFAULT_PAGE_SIZE;
 
-  const resolvedPageSize =
-    pageSize && pageSize > 0 ? pageSize : FOLLOW_DEFAULT_PAGE_SIZE;
+  const resolvedPageSize = pageSize && pageSize > 0 ? pageSize : FOLLOW_DEFAULT_PAGE_SIZE;
 
   const hasMore =
     typeof data.hasMore === "boolean"
@@ -207,33 +185,27 @@ function mapFollowResponse(
   };
 }
 
-export async function fetchUsers(
-  params: UserListParams,
-): Promise<UserListResponse> {
-  const response = await api.get("/admin/users", { params });
-  return normalizeListResponse(response?.data);
+export async function fetchUsers(params: UserListParams): Promise<UserListResponse> {
+  const response = await api({
+    method: "GET",
+    url: "users-users",
+  });
+  return normalizeListResponse(response);
 }
 
-export async function banUser(
-  userId: string,
-  payload?: BanUserPayload,
-): Promise<BanUserResponse> {
+export async function banUser(userId: string, payload?: BanUserPayload): Promise<BanUserResponse> {
   const body = payload ?? DEFAULT_BAN_PAYLOAD;
 
-  try {
-    const response = await api.post(`/admin/users/${userId}/ban`, body);
-    return (response?.data ?? {}) as BanUserResponse;
-  } catch (error) {
-    if (axios.isAxiosError(error) && error.response?.status === 404) {
-      const fallbackResponse = await api.patch(`/admin/users/${userId}`, {
-        status: "banned",
-        reason: body.reason,
-        description: body.description,
-      });
-      return (fallbackResponse?.data ?? {}) as BanUserResponse;
-    }
-    throw error;
-  }
+  const response = await invokeFunction<BanUserResponse>("user-update-profile", {
+    method: "PATCH",
+    body: {
+      userId,
+      status: "banned",
+      reason: body.reason,
+      description: body.description,
+    },
+  });
+  return (response ?? {}) as BanUserResponse;
 }
 
 export async function unbanUser(
@@ -242,45 +214,51 @@ export async function unbanUser(
 ): Promise<BanUserResponse> {
   const body = payload ?? DEFAULT_UNBAN_PAYLOAD;
 
-  try {
-    const response = await api.post(`/admin/users/${userId}/unban`, body);
-    return (response?.data ?? {}) as BanUserResponse;
-  } catch (error) {
-    if (axios.isAxiosError(error) && error.response?.status === 404) {
-      const fallbackResponse = await api.patch(`/admin/users/${userId}`, {
-        status: body.status ?? "active",
-        description: body.description,
-      });
-      return (fallbackResponse?.data ?? {}) as BanUserResponse;
-    }
-    throw error;
-  }
+  const response = await invokeFunction<BanUserResponse>("user-update-profile", {
+    method: "PATCH",
+    body: {
+      userId,
+      status: body.status ?? "active",
+      description: body.description,
+    },
+  });
+  return (response ?? {}) as BanUserResponse;
 }
 
-export async function fetchUserProfile(
-  userId: string,
-): Promise<UserProfileResponse> {
-  const response = await api.get(`/admin/users/${userId}`);
-  return (response?.data ?? {}) as UserProfileResponse;
+export async function fetchUserProfile(userId: string): Promise<UserProfileResponse> {
+  const response = await invokeFunction<UserProfileResponse>("user-profile", {
+    method: "GET",
+    body: { userId },
+  });
+  return (response ?? {}) as UserProfileResponse;
 }
 
 export async function fetchUserSessionsAdmin(userId: string): Promise<any> {
-  const response = await api.get(`/admin/users/${userId}/sessions`);
-  return response?.data ?? null;
+  const response = await invokeFunction<unknown>("room-history", {
+    method: "GET",
+    body: { userId },
+  });
+  return response ?? null;
 }
 
 export async function fetchFollowers(
   userId: string,
   params?: FollowParams,
 ): Promise<FollowListResult> {
-  const response = await api.get(`/users/${userId}/followers`, { params });
-  return mapFollowResponse(response?.data, "followers", params);
+  const response = await invokeFunction<unknown>("user-follow", {
+    method: "GET",
+    body: { userId, direction: "followers", ...params },
+  });
+  return mapFollowResponse(response, "followers", params);
 }
 
 export async function fetchFollowing(
   userId: string,
   params?: FollowParams,
 ): Promise<FollowListResult> {
-  const response = await api.get(`/users/${userId}/following`, { params });
-  return mapFollowResponse(response?.data, "following", params);
+  const response = await invokeFunction<unknown>("user-follow", {
+    method: "GET",
+    body: { userId, direction: "following", ...params },
+  });
+  return mapFollowResponse(response, "following", params);
 }

@@ -1,14 +1,14 @@
 // src/features/users/components/profile/UserReportsSection.tsx
 import React from "react";
-import type { UserProfileReport } from "../../types";
-import { formatDateTime } from "../../profile-formatters";
+import type { UserProfileReport } from "@/types/users";
+import { formatDateTime } from "../../utils/profile-formatters";
 
 type Props = {
   reports: UserProfileReport[];
   reportsTotal: number;
 };
 
-const UserReportsSection: React.FC<Props> = ({ reports, reportsTotal }) => (
+export const UserReportsSection: React.FC<Props> = ({ reports, reportsTotal }) => (
   <section className="mt-12 space-y-6">
     <header className="flex items-center justify-between">
       <h2 className="text-lg font-semibold text-[#191F33]">Denúncias</h2>
@@ -49,5 +49,3 @@ const UserReportsSection: React.FC<Props> = ({ reports, reportsTotal }) => (
     )}
   </section>
 );
-
-export default UserReportsSection;

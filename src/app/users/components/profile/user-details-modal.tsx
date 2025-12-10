@@ -1,7 +1,7 @@
 // src/features/users/components/profile/UserDetailsModal.tsx
 import React from "react";
 import Modal from "@/components/ui/Modal";
-import type { UserProfile } from "../../types";
+import type { UserProfile } from "@/types/users";
 
 type Props = {
   open: boolean;
@@ -49,7 +49,7 @@ const InfoRow: React.FC<{ label: string; value: string }> = ({ label, value }) =
   </div>
 );
 
-const UserDetailsModal: React.FC<Props> = ({ open, onClose, profile }) => (
+export const UserDetailsModal: React.FC<Props> = ({ open, onClose, profile }) => (
   <Modal
     open={open}
     onClose={onClose}
@@ -67,5 +67,3 @@ const UserDetailsModal: React.FC<Props> = ({ open, onClose, profile }) => (
     </div>
   </Modal>
 );
-
-export default UserDetailsModal;

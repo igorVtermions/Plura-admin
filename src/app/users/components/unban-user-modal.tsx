@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import Modal from "@/components/ui/Modal";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { USER_JUSTIFICATION_LIMIT } from "../constants";
+import { USER_JUSTIFICATION_LIMIT } from "../utils/constants";
 
 type Props = {
   open: boolean;
@@ -11,7 +11,7 @@ type Props = {
   onConfirm: (payload: { description: string }) => void;
 };
 
-const UnbanUserModal: React.FC<Props> = ({ open, pending, onClose, onConfirm }) => {
+export function UnbanUserModal({ open, pending, onClose, onConfirm }: Props) {
   const [description, setDescription] = useState("");
   const [error, setError] = useState<string | undefined>();
 
@@ -64,7 +64,7 @@ const UnbanUserModal: React.FC<Props> = ({ open, pending, onClose, onConfirm }) 
             disabled={confirmDisabled}
             className={cn(
               "h-11 rounded-[12px] px-6 text-sm font-semibold transition-colors disabled:opacity-70",
-              "bg-[#256740] text-white hover:bg-[#1F5A35]"
+              "bg-[#256740] text-white hover:bg-[#1F5A35]",
             )}
           >
             {pending ? "Processando..." : "Desbanir usuário"}
@@ -79,7 +79,7 @@ const UnbanUserModal: React.FC<Props> = ({ open, pending, onClose, onConfirm }) 
         <div
           className={cn(
             "rounded-xl border px-4 py-3",
-            error ? "border-[#F5C2C7]" : "border-[#D5DDF5]"
+            error ? "border-[#F5C2C7]" : "border-[#D5DDF5]",
           )}
         >
           <textarea
@@ -107,6 +107,4 @@ const UnbanUserModal: React.FC<Props> = ({ open, pending, onClose, onConfirm }) 
       </div>
     </Modal>
   );
-};
-
-export default UnbanUserModal;
+}

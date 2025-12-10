@@ -1,7 +1,7 @@
 import React, { useMemo } from "react";
 import Modal from "@/components/ui/Modal";
-import { formatDateTime } from "../../profile-formatters";
-import type { UserProfileReport } from "../../types";
+import { formatDateTime } from "../../utils/profile-formatters";
+import type { UserProfileReport } from "@/types/users";
 
 type Props = {
   open: boolean;
@@ -15,16 +15,14 @@ const MOCK_REPORTS: UserProfileReport[] = [
     id: "mock-1",
     authorName: "Equipe Plura",
     reason: "Conduta inadequada",
-    description:
-      "Transmissão interrompida por linguagem imprópria detectada pela moderação.",
+    description: "Transmissão interrompida por linguagem imprópria detectada pela moderação.",
     createdAt: "2024-11-18T10:30:00.000Z",
   },
   {
     id: "mock-2",
     authorName: "Aluno convidado",
     reason: "Comportamento agressivo",
-    description:
-      "Participante relatou atitude hostil durante sessão de Perguntas & Respostas.",
+    description: "Participante relatou atitude hostil durante sessão de Perguntas & Respostas.",
     createdAt: "2024-11-04T18:05:00.000Z",
   },
   {
@@ -50,25 +48,16 @@ function getCountLabel(
   return `${items.length} de ${effectiveTotal} denúncias`;
 }
 
-const UserReportsModal: React.FC<Props> = ({ open, onClose, reports, total }) => {
+export const UserReportsModal: React.FC<Props> = ({ open, onClose, reports, total }) => {
   const usingMock = !reports || reports.length === 0;
-  const items = useMemo(
-    () => (usingMock ? MOCK_REPORTS : reports ?? []),
-    [reports, usingMock],
-  );
+  const items = useMemo(() => (usingMock ? MOCK_REPORTS : reports ?? []), [reports, usingMock]);
   const subtitle = usingMock
     ? "Visualização mockada enquanto a integração real não chega"
     : "Denúncias registradas para este usuário";
   const countLabel = getCountLabel(items, total, usingMock);
 
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title="Denúncias"
-      subtitle={subtitle}
-      maxWidth="max-w-2xl"
-    >
+    <Modal open={open} onClose={onClose} title="Denúncias" subtitle={subtitle} maxWidth="max-w-2xl">
       <div className="space-y-4">
         {usingMock && (
           <div className="rounded-lg border border-dashed border-[#D0D9F1] bg-[#F8FAFF] p-4 text-sm text-[#5A6480]">
@@ -82,10 +71,7 @@ const UserReportsModal: React.FC<Props> = ({ open, onClose, reports, total }) =>
         ) : (
           <div className="space-y-3">
             {items.map((report) => (
-              <article
-                key={report.id}
-                className="rounded-2xl border border-[#E2E8F8] bg-white p-5"
-              >
+              <article key={report.id} className="rounded-2xl border border-[#E2E8F8] bg-white p-5">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <p className="text-sm font-semibold text-[#2B1F58]">
@@ -117,5 +103,3 @@ const UserReportsModal: React.FC<Props> = ({ open, onClose, reports, total }) =>
     </Modal>
   );
 };
-
-export default UserReportsModal;
