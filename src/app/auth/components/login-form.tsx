@@ -2,13 +2,12 @@
 
 import React, { useState } from "react";
 import { Eye, EyeClosed } from "lucide-react";
-import Link from "@/components/router/Link";
+import Link from "@/router/Link";
 import { useRouter } from "@/lib/router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { invokeFunction, setClientToken } from "@/services/api";
-import axios from "axios";
 
 export function LoginForm() {
   const router = useRouter();
@@ -31,25 +30,29 @@ export function LoginForm() {
 
     try {
       setLoading(true);
-      try { setClientToken(null); } catch {}
-      const res = await invokeFunction<{ token?: string; accessToken?: string; message?: string }>("users-login", {
-        method: "POST",
-        body: { email, password },
-      });
+      try {
+        setClientToken(null);
+      } catch {}
+      const res = await invokeFunction<{ token?: string; accessToken?: string; message?: string }>(
+        "users-login",
+        {
+          method: "POST",
+          body: { email, password },
+        },
+      );
 
-      const token = res.token ?? res.accessToken ?? null;
+      const token = res?.token ?? res?.accessToken ?? null;
       if (token) {
         setClientToken(token);
         router.push("/home");
         return;
       }
 
-      const message = res.data?.message ?? "Autenticação realizada, mas sem token.";
+      const message = res?.data?.message ?? "Autenticação realizada, mas sem token.";
       setError(message);
     } catch (err: unknown) {
       let message = "Erro ao autenticar.";
       if (err instanceof Error) {
-        // Supabase function invocation error might include this
         if (err.message.includes("credentials")) {
           message = "Credenciais inválidas.";
         } else {
@@ -66,7 +69,14 @@ export function LoginForm() {
     <form className="grid gap-4" onSubmit={onSubmit} noValidate>
       <div className="grid gap-2">
         <Label htmlFor="email">E-mail</Label>
-        <Input id="email" name="email" type="email" placeholder="E-mail" autoComplete="email" required />
+        <Input
+          id="email"
+          name="email"
+          type="email"
+          placeholder="E-mail"
+          autoComplete="email"
+          required
+        />
       </div>
 
       <div className="grid gap-2">
@@ -87,10 +97,17 @@ export function LoginForm() {
             onClick={() => setShowPassword((s) => !s)}
             className="absolute right-2 top-1/2 -translate-y-1/2 text-sm text-muted-foreground"
           >
-            {showPassword ? <EyeClosed className="h-5 w-5" aria-hidden /> : <Eye className="h-5 w-5" aria-hidden />}
+            {showPassword ? (
+              <EyeClosed className="h-5 w-5" aria-hidden />
+            ) : (
+              <Eye className="h-5 w-5" aria-hidden />
+            )}
           </button>
         </div>
-        <Link href="/forgot-password" className="text-sm text-primary hover:underline justify-self-start">
+        <Link
+          href="/forgot-password"
+          className="text-sm text-primary hover:underline justify-self-start"
+        >
           Esqueci minha senha
         </Link>
       </div>
@@ -107,5 +124,3 @@ export function LoginForm() {
     </form>
   );
 }
-
-export default LoginForm;

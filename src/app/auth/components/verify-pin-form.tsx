@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { invokeFunction } from "@/services/api";
+import { useRouter } from "@/lib/router";
 
 type Props = { email: string; adminId?: string };
 
@@ -65,7 +66,7 @@ export function VerifyPinForm({ email, adminId }: Props) {
 
     try {
       setLoading(true);
-      await invokeFunction("verify-pin", { method: 'POST', body: payload });
+      await invokeFunction("verify-pin", { method: "POST", body: payload });
       router.push("/home");
     } catch (err: unknown) {
       let message = "Erro ao verificar PIN";
@@ -83,7 +84,10 @@ export function VerifyPinForm({ email, adminId }: Props) {
     setSuccess(null);
     try {
       setLoading(true);
-      const res = await invokeFunction<{ message?: string }>("resend-pin", { method: 'POST', body: { email } });
+      const res = await invokeFunction<{ message?: string }>("resend-pin", {
+        method: "POST",
+        body: { email },
+      });
       const msg = res.message ?? "PIN reenviado. Verifique seu e-mail.";
       setSuccess(msg);
     } catch (err: unknown) {

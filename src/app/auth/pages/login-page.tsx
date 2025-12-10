@@ -1,10 +1,17 @@
-﻿import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+﻿import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Logo } from "@/components/brand/logo";
-import { LoginForm } from "@/features/auth/components/login-form";
-import { SuccessBanner } from "@/components/feedback/success-banner";
-import Link from "@/components/router/Link";
+import { LoginForm } from "@/app/auth/components/login-form";
+import Link from "@/router/Link";
+import { SuccessBanner } from "@/app/home/components/success-banner";
 
-export default function LoginPage() {
+export function LoginPage() {
   return (
     <main className="min-h-dvh w-full bg-white flex flex-col items-center justify-center px-6 py-10 gap-8">
       <SuccessBanner />
@@ -29,6 +36,3 @@ export default function LoginPage() {
     </main>
   );
 }
-
-
-

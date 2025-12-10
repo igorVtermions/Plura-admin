@@ -9,7 +9,7 @@ import { invokeFunction } from "@/services/api";
 
 type ApiErrorResponse = { message?: string; error?: string } & Record<string, unknown>;
 
-export default function ForgotPasswordForm() {
+export function ForgotPasswordForm() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
@@ -28,7 +28,7 @@ export default function ForgotPasswordForm() {
 
     try {
       setLoading(true);
-      await invokeFunction("users-forgot-password", { method: 'POST', body: { email: value } });
+      await invokeFunction("users-forgot-password", { method: "POST", body: { email: value } });
       setSuccess("Código enviado. Verifique seu e‑mail.");
       const q = new URLSearchParams({ email: value });
       setTimeout(() => router.push(`/reset-password?${q.toString()}`), 900);

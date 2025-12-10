@@ -1,14 +1,21 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Logo } from "@/components/brand/logo";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { PinInput } from "@/features/auth/components/pin-input";
+import { PinInput } from "@/app/auth/components/pin-input";
 import { useRouter } from "@/lib/router";
-import Link from "@/components/router/Link";
+import Link from "@/router/Link";
 
 function validatePassword(pw: string) {
   return {
@@ -20,7 +27,7 @@ function validatePassword(pw: string) {
   };
 }
 
-export default function ForgotPasswordPage() {
+export function ForgotPasswordPage() {
   const router = useRouter();
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [email, setEmail] = useState("");
@@ -66,9 +73,20 @@ export default function ForgotPasswordPage() {
             <form className="grid gap-4" onSubmit={submitEmail}>
               <div className="grid gap-2">
                 <Label htmlFor="email">E-mail</Label>
-                <Input id="email" name="email" type="email" placeholder="E-mail" autoComplete="email" required value={email} onChange={(e)=>setEmail(e.target.value)} />
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  placeholder="E-mail"
+                  autoComplete="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
               </div>
-              <Button type="submit" className="w-full">Enviar código</Button>
+              <Button type="submit" className="w-full">
+                Enviar código
+              </Button>
             </form>
           )}
 
@@ -78,7 +96,9 @@ export default function ForgotPasswordPage() {
                 <Label>Digite o PIN de 4 dígitos enviado ao e-mail</Label>
                 <PinInput value={pin} onChange={setPin} />
               </div>
-              <Button type="submit" className="w-full">Validar PIN</Button>
+              <Button type="submit" className="w-full">
+                Validar PIN
+              </Button>
             </form>
           )}
 
@@ -101,11 +121,21 @@ export default function ForgotPasswordPage() {
                 />
                 {pwFocused && (
                   <ul id="password-help" className="text-xs text-muted-foreground space-y-1">
-                    <li className={rules.length ? "text-green-600" : "text-red-600"}>• Mínimo 8 caracteres</li>
-                    <li className={rules.upper ? "text-green-600" : "text-red-600"}>• Pelo menos 1 letra maiúscula</li>
-                    <li className={rules.lower ? "text-green-600" : "text-red-600"}>• Pelo menos 1 letra minúscula</li>
-                    <li className={rules.number ? "text-green-600" : "text-red-600"}>• Pelo menos 1 número</li>
-                    <li className={rules.special ? "text-green-600" : "text-red-600"}>• Pelo menos 1 caractere especial</li>
+                    <li className={rules.length ? "text-green-600" : "text-red-600"}>
+                      • Mínimo 8 caracteres
+                    </li>
+                    <li className={rules.upper ? "text-green-600" : "text-red-600"}>
+                      • Pelo menos 1 letra maiúscula
+                    </li>
+                    <li className={rules.lower ? "text-green-600" : "text-red-600"}>
+                      • Pelo menos 1 letra minúscula
+                    </li>
+                    <li className={rules.number ? "text-green-600" : "text-red-600"}>
+                      • Pelo menos 1 número
+                    </li>
+                    <li className={rules.special ? "text-green-600" : "text-red-600"}>
+                      • Pelo menos 1 caractere especial
+                    </li>
                   </ul>
                 )}
               </div>
@@ -123,18 +153,26 @@ export default function ForgotPasswordPage() {
                   aria-describedby="confirm-help"
                 />
                 {confirm.length > 0 && confirm !== password && (
-                  <p id="confirm-help" className="text-xs text-red-600">As senhas não coincidem</p>
+                  <p id="confirm-help" className="text-xs text-red-600">
+                    As senhas não coincidem
+                  </p>
                 )}
                 {confirm.length > 0 && confirm === password && (
-                  <p id="confirm-help" className="text-xs text-green-600">As senhas coincidem</p>
+                  <p id="confirm-help" className="text-xs text-green-600">
+                    As senhas coincidem
+                  </p>
                 )}
               </div>
-              <Button type="submit" className="w-full">Alterar senha</Button>
+              <Button type="submit" className="w-full">
+                Alterar senha
+              </Button>
             </form>
           )}
         </CardContent>
         <CardFooter className="justify-between">
-          <Link href="/" className="text-sm text-primary hover:underline">← Voltar para login</Link>
+          <Link href="/" className="text-sm text-primary hover:underline">
+            ← Voltar para login
+          </Link>
           <div />
         </CardFooter>
       </Card>

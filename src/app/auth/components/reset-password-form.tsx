@@ -13,10 +13,16 @@ type Props = { email?: string; adminId?: string };
 type ApiErrorResponse = { message?: string; error?: string } & Record<string, unknown>;
 
 type VerifyRequest = { pin: string; email?: string; adminId?: number };
-type ResetRequest = { pin: string; password: string; confirmPassword: string; email?: string; adminId?: number };
+type ResetRequest = {
+  pin: string;
+  password: string;
+  confirmPassword: string;
+  email?: string;
+  adminId?: number;
+};
 type ForgotRequest = { email?: string; adminId?: number };
 
-export default function ResetPasswordForm({ email, adminId }: Props) {
+export function ResetPasswordForm({ email, adminId }: Props) {
   const router = useRouter();
   const [digits, setDigits] = useState<string[]>(["", "", "", ""]);
   const [password, setPassword] = useState("");
@@ -75,7 +81,7 @@ export default function ResetPasswordForm({ email, adminId }: Props) {
 
     try {
       setLoadingVerify(true);
-      await invokeFunction("users-verify-reset-pin", { method: 'POST', body: payload });
+      await invokeFunction("users-verify-reset-pin", { method: "POST", body: payload });
       setVerified(true);
       setSuccess("Código verificado. Você pode escolher a nova senha.");
     } catch (err: unknown) {
@@ -126,7 +132,7 @@ export default function ResetPasswordForm({ email, adminId }: Props) {
 
     try {
       setLoadingReset(true);
-      await invokeFunction("users-reset-password", { method: 'POST', body: payload });
+      await invokeFunction("users-reset-password", { method: "POST", body: payload });
       setSuccess("Senha alterada com sucesso. Redirecionando...");
       setTimeout(() => router.push("/"), 900);
     } catch (err: unknown) {
@@ -162,7 +168,7 @@ export default function ResetPasswordForm({ email, adminId }: Props) {
 
     try {
       setLoadingVerify(true);
-      await invokeFunction("users-forgot-password", { method: 'POST', body: payload });
+      await invokeFunction("users-forgot-password", { method: "POST", body: payload });
       setSuccess("Código reenviado. Verifique seu e‑mail.");
     } catch (err: unknown) {
       let message = "Erro ao reenviar código.";
@@ -223,10 +229,21 @@ export default function ResetPasswordForm({ email, adminId }: Props) {
           </div>
 
           <div className="flex gap-3 justify-center">
-            <Button type="button" className="cursor-pointer" onClick={verifyPin} disabled={loadingVerify}>
+            <Button
+              type="button"
+              className="cursor-pointer"
+              onClick={verifyPin}
+              disabled={loadingVerify}
+            >
               {loadingVerify ? "Verificando..." : "Verificar código"}
             </Button>
-            <Button type="button" variant="outline" onClick={resendPin} disabled={loadingVerify} className="cursor-pointer">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={resendPin}
+              disabled={loadingVerify}
+              className="cursor-pointer"
+            >
               Reenviar código
             </Button>
           </div>
@@ -255,11 +272,16 @@ export default function ResetPasswordForm({ email, adminId }: Props) {
                 onClick={() => setShowPassword((s) => !s)}
                 className="absolute right-2 top-1/2 -translate-y-1/2 text-sm text-muted-foreground"
               >
-                {showPassword ? <EyeClosed className="h-5 w-5" aria-hidden /> : <Eye className="h-5 w-5" aria-hidden />}
+                {showPassword ? (
+                  <EyeClosed className="h-5 w-5" aria-hidden />
+                ) : (
+                  <Eye className="h-5 w-5" aria-hidden />
+                )}
               </button>
             </div>
             <div className="text-xs text-muted-foreground mt-1">
-              Use pelo menos 8 caracteres, incluindo maiúscula, minúscula, número e caractere especial.
+              Use pelo menos 8 caracteres, incluindo maiúscula, minúscula, número e caractere
+              especial.
             </div>
 
             <ul className="mt-2 grid gap-1">
@@ -299,7 +321,11 @@ export default function ResetPasswordForm({ email, adminId }: Props) {
                 onClick={() => setShowConfirm((s) => !s)}
                 className="absolute right-2 top-1/2 -translate-y-1/2 text-sm text-muted-foreground"
               >
-                {showConfirm ? <EyeClosed className="h-5 w-5" aria-hidden /> : <Eye className="h-5 w-5" aria-hidden />}
+                {showConfirm ? (
+                  <EyeClosed className="h-5 w-5" aria-hidden />
+                ) : (
+                  <Eye className="h-5 w-5" aria-hidden />
+                )}
               </button>
             </div>
           </div>
@@ -308,7 +334,13 @@ export default function ResetPasswordForm({ email, adminId }: Props) {
             <Button type="submit" className="cursor-pointer" disabled={loadingReset}>
               {loadingReset ? "Salvando..." : "Salvar nova senha"}
             </Button>
-            <Button type="button" variant="outline" onClick={() => setVerified(false)} disabled={loadingReset} className="cursor-pointer">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setVerified(false)}
+              disabled={loadingReset}
+              className="cursor-pointer"
+            >
               Alterar código
             </Button>
           </div>

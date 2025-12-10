@@ -1,9 +1,13 @@
 import React, { useEffect, useState } from "react";
-import { VerifyPinForm } from "@/features/auth/components/verify-pin-form";
+import { VerifyPinForm } from "@/app/auth/components/verify-pin-form";
 
 export const metadata = { title: "Verificar conta | Plura Talks - Administrador" };
 
-export default function Page({ searchParams }: { searchParams?: { email?: string; adminId?: string } }) {
+export function VerifyPage({
+  searchParams,
+}: {
+  searchParams?: { email?: string; adminId?: string };
+}) {
   const [clientEmail, setClientEmail] = useState<string | undefined>(() => {
     if (typeof window !== "undefined") {
       const sp = new URLSearchParams(window.location.search);
@@ -44,7 +48,8 @@ export default function Page({ searchParams }: { searchParams?: { email?: string
           </div>
         ) : (
           <div className="text-sm text-muted-foreground text-left">
-            Email não fornecido na query. Volte ao formulário de cadastro ou acesse /verify?email=seu@email.com
+            Email não fornecido na query. Volte ao formulário de cadastro ou acesse
+            /verify?email=seu@email.com
           </div>
         )}
       </div>

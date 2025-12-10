@@ -4,10 +4,9 @@ import React, { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import Link from "@/components/router/Link";
+import Link from "@/router/Link";
 import { useRouter } from "@/lib/router";
 import { invokeFunction } from "@/services/api";
-import axios from "axios";
 import { Eye, EyeClosed } from "lucide-react";
 
 function validatePassword(pw: string) {
@@ -54,27 +53,29 @@ export function RegisterForm() {
     try {
       setLoading(true);
 
-      const res = await invokeFunction<{ id?: number; adminId?: number; admin?: { id: number } }>("register", {
-        method: 'POST',
-        body: {
-          name,
-          email,
-          password: pw,
-          confirmPassword,
-        }
-      });
+      const res = await invokeFunction<{ id?: number; adminId?: number; admin?: { id: number } }>(
+        "register",
+        {
+          method: "POST",
+          body: {
+            name,
+            email,
+            password: pw,
+            confirmPassword,
+          },
+        },
+      );
 
       const rawId = res.id ?? res.adminId ?? res.admin?.id;
       const adminId = rawId != null ? Number(rawId) : undefined;
 
       try {
         if (!Number.isNaN(adminId)) {
-          await invokeFunction("send-pin", { method: 'POST', body: { adminId, via: "email" } });
+          await invokeFunction("send-pin", { method: "POST", body: { adminId, via: "email" } });
         } else {
-          await invokeFunction("send-pin", { method: 'POST', body: { email, via: "email" } });
+          await invokeFunction("send-pin", { method: "POST", body: { email, via: "email" } });
         }
-      } catch {
-      }
+      } catch {}
 
       const q = new URLSearchParams();
       q.set("email", email);
@@ -97,12 +98,26 @@ export function RegisterForm() {
     <form className="grid gap-4" onSubmit={onSubmit}>
       <div className="grid gap-2">
         <Label htmlFor="name">Nome</Label>
-        <Input id="name" name="name" type="text" placeholder="Seu nome" autoComplete="name" required />
+        <Input
+          id="name"
+          name="name"
+          type="text"
+          placeholder="Seu nome"
+          autoComplete="name"
+          required
+        />
       </div>
 
       <div className="grid gap-2">
         <Label htmlFor="email">E-mail</Label>
-        <Input id="email" name="email" type="email" placeholder="E-mail" autoComplete="email" required />
+        <Input
+          id="email"
+          name="email"
+          type="email"
+          placeholder="E-mail"
+          autoComplete="email"
+          required
+        />
       </div>
 
       <div className="grid gap-2">
@@ -128,16 +143,30 @@ export function RegisterForm() {
             onClick={() => setShowPassword((s) => !s)}
             className="absolute right-2 top-1/2 -translate-y-1/2 text-sm text-muted-foreground"
           >
-            {showPassword ? <EyeClosed className="h-5 w-5" aria-hidden /> : <Eye className="h-5 w-5" aria-hidden />}
+            {showPassword ? (
+              <EyeClosed className="h-5 w-5" aria-hidden />
+            ) : (
+              <Eye className="h-5 w-5" aria-hidden />
+            )}
           </button>
         </div>
         {pwFocused && (
           <ul id="password-help" className="text-xs text-muted-foreground space-y-1">
-            <li className={rules.length ? "text-green-600" : "text-red-600"}>• Mínimo 8 caracteres</li>
-            <li className={rules.upper ? "text-green-600" : "text-red-600"}>• Pelo menos 1 letra maiúscula</li>
-            <li className={rules.lower ? "text-green-600" : "text-red-600"}>• Pelo menos 1 letra minúscula</li>
-            <li className={rules.number ? "text-green-600" : "text-red-600"}>• Pelo menos 1 número</li>
-            <li className={rules.special ? "text-green-600" : "text-red-600"}>• Pelo menos 1 caractere especial</li>
+            <li className={rules.length ? "text-green-600" : "text-red-600"}>
+              • Mínimo 8 caracteres
+            </li>
+            <li className={rules.upper ? "text-green-600" : "text-red-600"}>
+              • Pelo menos 1 letra maiúscula
+            </li>
+            <li className={rules.lower ? "text-green-600" : "text-red-600"}>
+              • Pelo menos 1 letra minúscula
+            </li>
+            <li className={rules.number ? "text-green-600" : "text-red-600"}>
+              • Pelo menos 1 número
+            </li>
+            <li className={rules.special ? "text-green-600" : "text-red-600"}>
+              • Pelo menos 1 caractere especial
+            </li>
           </ul>
         )}
       </div>
@@ -163,11 +192,23 @@ export function RegisterForm() {
             onClick={() => setShowConfirm((s) => !s)}
             className="absolute right-2 top-1/2 -translate-y-1/2 text-sm text-muted-foreground"
           >
-            {showConfirm ? <EyeClosed className="h-5 w-5" aria-hidden /> : <Eye className="h-5 w-5" aria-hidden />}
+            {showConfirm ? (
+              <EyeClosed className="h-5 w-5" aria-hidden />
+            ) : (
+              <Eye className="h-5 w-5" aria-hidden />
+            )}
           </button>
         </div>
-        {mismatch && <p id="confirm-help" className="text-xs text-red-600">As senhas não coincidem</p>}
-        {!mismatch && match && <p id="confirm-help" className="text-xs text-green-600">As senhas coincidem</p>}
+        {mismatch && (
+          <p id="confirm-help" className="text-xs text-red-600">
+            As senhas não coincidem
+          </p>
+        )}
+        {!mismatch && match && (
+          <p id="confirm-help" className="text-xs text-green-600">
+            As senhas coincidem
+          </p>
+        )}
       </div>
 
       {error && <div className="text-sm text-red-600">{error}</div>}
@@ -177,10 +218,11 @@ export function RegisterForm() {
       </Button>
 
       <p className="text-sm text-muted-foreground text-center">
-        Já tem conta? <Link href="/" className="text-primary hover:underline">Entrar</Link>
+        Já tem conta?{" "}
+        <Link href="/" className="text-primary hover:underline">
+          Entrar
+        </Link>
       </p>
     </form>
   );
 }
-
-export default RegisterForm;
