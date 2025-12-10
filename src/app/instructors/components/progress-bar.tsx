@@ -7,7 +7,7 @@ type Props = {
   current: number;
 };
 
-export default function ProgressBar({ total, current }: Props) {
+export function ProgressBar({ total, current }: Props) {
   return (
     <div className="w-full max-w-5xl mx-auto px-6 py-3">
       <div className="flex gap-2 items-center">

@@ -1,5 +1,5 @@
 // src/features/instructors/api.ts
-import api from "@/services/api";
+import api, { invokeFunction } from "@/services/api";
 import type {
   InstructorCardData,
   InstructorFollower,
@@ -12,7 +12,7 @@ import type {
   InstructorProfileActivity,
   InstructorProfileReport,
   InstructorStatus,
-} from "./types";
+} from "@/types/tutor";
 
 function toNumber(value: unknown): number | undefined {
   if (typeof value === "number" && Number.isFinite(value)) return value;
@@ -166,23 +166,8 @@ export function adaptInstructor(raw: unknown): InstructorCardData | null {
       : data;
 
   // id in API may be number or string; accept numeric ids by converting to string
-  const rawId =
-    pickString(
-      base.id,
-      base.tutorId,
-      base._id,
-      data.id,
-      data.tutorId,
-      data._id,
-    );
-  const numericId = pickNumber(
-    base.id,
-    base.tutorId,
-    base._id,
-    data.id,
-    data.tutorId,
-    data._id,
-  );
+  const rawId = pickString(base.id, base.tutorId, base._id, data.id, data.tutorId, data._id);
+  const numericId = pickNumber(base.id, base.tutorId, base._id, data.id, data.tutorId, data._id);
   const id = rawId ?? (typeof numericId === "number" ? String(numericId) : null);
   if (!id) return null;
 
@@ -513,13 +498,7 @@ function normalizeInstructorReportEntry(raw: unknown): InstructorProfileReport |
   if (!raw || typeof raw !== "object") return null;
   const data = raw as Record<string, unknown>;
 
-  const id = pickString(
-    data.id,
-    data.reportId,
-    data._id,
-    data.uuid,
-    data.code,
-  );
+  const id = pickString(data.id, data.reportId, data._id, data.uuid, data.code);
   if (!id) return null;
 
   const authorName = pickString(
@@ -530,13 +509,7 @@ function normalizeInstructorReportEntry(raw: unknown): InstructorProfileReport |
     data.moderator,
   );
 
-  const reason = pickString(
-    data.reason,
-    data.type,
-    data.title,
-    data.category,
-    data.subject,
-  );
+  const reason = pickString(data.reason, data.type, data.title, data.category, data.subject);
 
   const description = pickString(
     data.description,
@@ -730,14 +703,21 @@ export async function fetchInstructors(
     status: params.status,
   };
   Object.keys(query).forEach((key) => query[key] === undefined && delete query[key]);
-  const response = await api.get("/tutors", { params: query });
-  return normalizeListResponse(response?.data ?? response);
+  const response = await api({
+    url: "user-tutor-list?action=list",
+    method: "GET",
+    params: query,
+  });
+  return normalizeListResponse(response.data);
 }
 
 export async function fetchInstructorProfile(id: string): Promise<InstructorProfile | null> {
   if (!id) return null;
-  const response = await api.get(`/tutors/${id}`);
-  return adaptInstructorProfilePayload(response?.data ?? response);
+  const response = await invokeFunction<unknown>("tutor", {
+    method: "GET",
+    body: { tutorId: id },
+  });
+  return adaptInstructorProfilePayload(response);
 }
 
 export async function fetchTutorSessionsAdmin(tutorId: string): Promise<{
@@ -748,28 +728,23 @@ export async function fetchTutorSessionsAdmin(tutorId: string): Promise<{
 } | null> {
   if (!tutorId) return null;
   try {
-    const res = await api.get(`/api/admin/tutors/${tutorId}/sessions`);
-    const payload = res?.data ?? res;
+    const payload = await invokeFunction<{
+      tutor?: unknown;
+      live?: unknown[];
+      upcoming?: unknown[];
+      finished?: unknown[];
+    }>("list-live-chat-room-by-tutor", {
+      method: "GET",
+      body: { tutorId },
+    });
     if (!payload || typeof payload !== "object") return null;
     const p = payload as Record<string, unknown>;
     const live = Array.isArray(p.live) ? p.live : [];
     const upcoming = Array.isArray(p.upcoming) ? p.upcoming : [];
     const finished = Array.isArray(p.finished) ? p.finished : [];
     return { tutor: p.tutor, live, upcoming, finished };
-  } catch (err) {
-    // try alternate path without /api prefix
-    try {
-      const res = await api.get(`/admin/tutors/${tutorId}/sessions`);
-      const payload = res?.data ?? res;
-      if (!payload || typeof payload !== "object") return null;
-      const p = payload as Record<string, unknown>;
-      const live = Array.isArray(p.live) ? p.live : [];
-      const upcoming = Array.isArray(p.upcoming) ? p.upcoming : [];
-      const finished = Array.isArray(p.finished) ? p.finished : [];
-      return { tutor: p.tutor, live, upcoming, finished };
-    } catch (e) {
-      return null;
-    }
+  } catch (e) {
+    return null;
   }
 }
 
@@ -780,8 +755,10 @@ export async function fetchInstructorFollowers(
   const page = params.page ?? 1;
   const perPage = params.perPage ?? DEFAULT_FOLLOWERS_PAGE_SIZE;
   const query: Record<string, unknown> = { page, perPage, limit: perPage };
-  const response = await api.get(`/tutors/${tutorId}/followers`, { params: query });
-  const payload = response?.data ?? response;
+  const payload = await invokeFunction<unknown>("tutor-follow", {
+    method: "GET",
+    body: { tutorId, ...query },
+  });
   const items = collectFollowersArray(payload)
     .map(normalizeInstructorFollowerEntry)
     .filter((item): item is InstructorFollower => item !== null);
@@ -791,8 +768,7 @@ export async function fetchInstructorFollowers(
     typeof perPageFromResponse === "number" && perPageFromResponse > 0
       ? perPageFromResponse
       : perPage;
-  const hasMore =
-    typeof total === "number" ? page * pageSize < total : items.length === pageSize;
+  const hasMore = typeof total === "number" ? page * pageSize < total : items.length === pageSize;
   return {
     items,
     total: typeof total === "number" ? total : null,
@@ -811,16 +787,21 @@ export async function updateInstructor(
   const bodyEntries = Object.entries(payload).filter(([, value]) => value !== undefined);
   if (bodyEntries.length > 0) {
     const body = Object.fromEntries(bodyEntries);
-    const res = await api.put(`/tutors/${tutorId}`, body);
-    responses.push(res?.data ?? res);
+    const res = await invokeFunction<unknown>("tutor", {
+      method: "PUT",
+      body: { tutorId, ...body },
+    });
+    responses.push(res);
   }
   if (options.photoFile) {
     const fd = new FormData();
     fd.append("photo", options.photoFile);
-    const res = await api.post(`/tutors/${tutorId}/photo`, fd, {
-      headers: { "Content-Type": "multipart/form-data" },
+    fd.append("tutorId", tutorId);
+    const res = await invokeFunction<unknown>("tutor-photo", {
+      method: "POST",
+      body: fd,
     });
-    responses.push(res?.data ?? res);
+    responses.push(res);
   }
   for (let i = responses.length - 1; i >= 0; i -= 1) {
     const adapted = adaptInstructorProfilePayload(responses[i]);
@@ -831,5 +812,5 @@ export async function updateInstructor(
 
 export async function deleteInstructor(id: string): Promise<void> {
   if (!id) return;
-  await api.delete(`/tutors/${id}`);
+  await invokeFunction("tutor", { method: "DELETE", body: { tutorId: id } });
 }

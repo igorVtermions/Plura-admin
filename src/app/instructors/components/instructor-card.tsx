@@ -6,7 +6,7 @@ import Image from "@/components/ui/Image";
 import { Button } from "@/components/ui/button";
 import Modal from "@/components/ui/Modal";
 import { cn } from "@/lib/utils";
-import type { InstructorCardData } from "../types";
+import type { InstructorCardData } from "@/types/tutor";
 
 const MAX_DESCRIPTION_LENGTH = 40;
 const DEFAULT_DESCRIPTION = "Este instrutor ainda não adicionou uma bio.";
@@ -19,7 +19,7 @@ type Props = {
   pendingDelete?: boolean;
 };
 
-export default function InstructorCard({
+export function InstructorCard({
   instructor,
   onView,
   onEdit,
@@ -66,8 +66,7 @@ export default function InstructorCard({
   };
 
   const hasAvatar =
-    typeof instructor.avatarUrl === "string" &&
-    instructor.avatarUrl.trim().length > 0;
+    typeof instructor.avatarUrl === "string" && instructor.avatarUrl.trim().length > 0;
 
   return (
     <article className="relative flex h-[306px] w-full max-w-[362px] flex-col overflow-hidden rounded-[22px] border border-[#DDD1FF] bg-gradient-to-b from-[#F3EEFF] to-white">
@@ -168,9 +167,7 @@ export default function InstructorCard({
           )}
         </div>
 
-        <p className="mt-4 flex-1 text-sm leading-relaxed text-[#5F4A8C]">
-          {description}
-        </p>
+        <p className="mt-4 flex-1 text-sm leading-relaxed text-[#5F4A8C]">{description}</p>
 
         <div className="pt-4">
           <Button

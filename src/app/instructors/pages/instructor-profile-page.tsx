@@ -1,4 +1,3 @@
-// src/features/instructors/pages/instructor-profile-page.tsx
 "use client";
 
 import React, { useCallback, useEffect, useState } from "react";
@@ -7,24 +6,23 @@ import { ArrowLeft, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import Modal from "@/components/ui/Modal";
-import InstructorHero from "../components/profile/InstructorHero";
-import InstructorStats from "../components/profile/InstructorStats";
-import InstructorActivitySection from "../components/profile/InstructorActivitySection";
-import InstructorFollowersModal from "../components/profile/InstructorFollowersModal";
-import InstructorReportsModal from "../components/profile/InstructorReportsModal";
-import EditInstructorModal from "@/components/instructor/EditInstructorModal";
+import { InstructorHero } from "../components/profile/instructor-hero";
+import { InstructorStats } from "../components/profile/instructor-stats";
+import { InstructorActivitySection } from "../components/profile/instructor-activity-section";
+import { InstructorFollowersModal } from "../components/profile/instructor-followers-modal";
+import { InstructorReportsModal } from "../components/profile/instructor-reports-modal";
+import { EditInstructorModal } from "@/app/instructors/components/edit-instructor-modal";
 import {
   deleteInstructor,
   fetchInstructorFollowers,
   fetchInstructorProfile,
-} from "../api";
-import api from "@/services/api";
-import { INSTRUCTOR_STATUS_META } from "../visuals";
-import type { InstructorCardData, InstructorProfile } from "../types";
+} from "@/services/tutor";
+import { INSTRUCTOR_STATUS_META } from "../components/profile/visuals";
+import type { InstructorCardData, InstructorProfile } from "@/types/tutor";
 
 const FOLLOWERS_PAGE_SIZE = 20;
 
-export default function InstructorProfilePage() {
+export function InstructorProfilePage() {
   const { instructorId } = useParams();
   const navigate = useNavigate();
 
@@ -62,12 +60,17 @@ export default function InstructorProfilePage() {
         // raw profile fetch removed (debug panel cleanup)
         // try the new admin endpoint that returns grouped sessions (live/upcoming/finished)
         try {
-          const sessionsResp = await import("../api").then((m) => m.fetchTutorSessionsAdmin(id));
+          const sessionsResp = await import("@/services/tutor").then((m) =>
+            m.fetchTutorSessionsAdmin(id),
+          );
           // eslint-disable-next-line no-console
           console.debug("instructor-profile: fetchTutorSessionsAdmin result:", sessionsResp);
           if (sessionsResp) {
-            const mapped: import("../types").InstructorProfileActivity[] = [];
-            const mapRoom = (room: Record<string, unknown>, kind: "live" | "upcoming" | "finished") => {
+            const mapped: import("@/types/tutor").InstructorProfileActivity[] = [];
+            const mapRoom = (
+              room: Record<string, unknown>,
+              kind: "live" | "upcoming" | "finished",
+            ) => {
               const rid = (room.id ?? room.roomId ?? room._id ?? room.code) as any;
               const title = (room.name ?? room.title ?? room.roomTitle ?? room.topic) as any;
               const start = (room.startAt ?? room.startTime ?? room.date ?? room.beginAt) as any;
@@ -75,9 +78,12 @@ export default function InstructorProfilePage() {
               const stats = (room.stats ?? room) as Record<string, unknown> | undefined;
               let participants: number | null = null;
               if (stats) {
-                if (typeof stats.participantsCount === "number") participants = stats.participantsCount as number;
-                else if (typeof stats.totalParticipants === "number") participants = stats.totalParticipants as number;
-                else if (typeof stats.participants === "number") participants = stats.participants as number;
+                if (typeof stats.participantsCount === "number")
+                  participants = stats.participantsCount as number;
+                else if (typeof stats.totalParticipants === "number")
+                  participants = stats.totalParticipants as number;
+                else if (typeof stats.participants === "number")
+                  participants = stats.participants as number;
                 else if (typeof stats.viewers === "number") participants = stats.viewers as number;
               }
               return {
@@ -90,18 +96,24 @@ export default function InstructorProfilePage() {
                 isLive: kind === "live",
                 status: kind === "live" ? "live" : kind === "upcoming" ? "upcoming" : "finished",
                 roomId: rid ? String(rid) : null,
-              } as import("../types").InstructorProfileActivity;
+              } as import("@/types/tutor").InstructorProfileActivity;
             };
 
-            const tutorSessions = sessionsResp.live.concat(sessionsResp.upcoming, sessionsResp.finished);
+            const tutorSessions = sessionsResp.live.concat(
+              sessionsResp.upcoming,
+              sessionsResp.finished,
+            );
             for (const r of sessionsResp.live) {
-              if (r && typeof r === "object") mapped.push(mapRoom(r as Record<string, unknown>, "live"));
+              if (r && typeof r === "object")
+                mapped.push(mapRoom(r as Record<string, unknown>, "live"));
             }
             for (const r of sessionsResp.upcoming) {
-              if (r && typeof r === "object") mapped.push(mapRoom(r as Record<string, unknown>, "upcoming"));
+              if (r && typeof r === "object")
+                mapped.push(mapRoom(r as Record<string, unknown>, "upcoming"));
             }
             for (const r of sessionsResp.finished) {
-              if (r && typeof r === "object") mapped.push(mapRoom(r as Record<string, unknown>, "finished"));
+              if (r && typeof r === "object")
+                mapped.push(mapRoom(r as Record<string, unknown>, "finished"));
             }
 
             if (mapped.length > 0) {
@@ -160,8 +172,7 @@ export default function InstructorProfilePage() {
         });
         if (cancelled) return;
 
-        const total =
-          typeof summary.total === "number" ? summary.total : summary.items.length;
+        const total = typeof summary.total === "number" ? summary.total : summary.items.length;
         if (!Number.isFinite(total)) return;
 
         setProfile((prev) => {

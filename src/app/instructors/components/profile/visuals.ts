@@ -1,5 +1,4 @@
-// src/features/instructors/visuals.ts
-import type { InstructorStatus } from "./types";
+import type { InstructorStatus } from "@/types/tutor";
 
 export type InstructorStatusMeta = {
   headerColor: string;
@@ -13,10 +12,7 @@ export type InstructorStatusMeta = {
   primaryButtonShadow: string;
 };
 
-export const INSTRUCTOR_STATUS_META: Record<
-  InstructorStatus,
-  InstructorStatusMeta
-> = {
+export const INSTRUCTOR_STATUS_META: Record<InstructorStatus, InstructorStatusMeta> = {
   active: {
     headerColor: "#B08BFF",
     nameColor: "#2B1F58",

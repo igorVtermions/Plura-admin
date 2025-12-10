@@ -15,7 +15,7 @@ type StatItem = {
   onPress?: () => void;
 };
 
-const InstructorStats: React.FC<Props> = ({
+export const InstructorStats: React.FC<Props> = ({
   followers,
   reports,
   onFollowersClick,
@@ -72,5 +72,3 @@ const InstructorStats: React.FC<Props> = ({
     </section>
   );
 };
-
-export default InstructorStats;

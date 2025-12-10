@@ -1,7 +1,5 @@
 "use client";
 
-import React from "react";
-
 type Props = {
   name: string;
   role: string;
@@ -10,10 +8,13 @@ type Props = {
   about: string;
 };
 
-export default function Step2Summary({ name, role, email, phone, about }: Props) {
+export function Summary({ name, role, email, phone, about }: Props) {
   return (
     <div className="w-full mt-2">
-      <div className="w-full p-4 rounded-md" style={{ background: "#F3F0FF", border: "1px solid #D4C7FF" }}>
+      <div
+        className="w-full p-4 rounded-md"
+        style={{ background: "#F3F0FF", border: "1px solid #D4C7FF" }}
+      >
         <div className="flex flex-col gap-3">
           <div>
             <div style={{ fontSize: 14, fontWeight: 500, color: "#191F33" }}>Nome do instrutor</div>

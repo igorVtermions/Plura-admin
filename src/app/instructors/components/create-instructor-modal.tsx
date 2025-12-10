@@ -2,11 +2,11 @@
 
 import React, { useRef, useState, useLayoutEffect } from "react";
 import Modal from "@/components/ui/Modal";
-import ProgressBar from "./ProgressBar";
+import { ProgressBar } from "./progress-bar";
 import toast from "react-hot-toast";
-import InstructorFormStep1 from "./InstructorFormStep1";
-import Step2Summary from "./Step2Summary";
-import api from "@/services/api";
+import { InstructorForm } from "./instructor-form";
+import { Summary } from "./summary";
+import { invokeFunction } from "@/services/api";
 
 type Props = {
   open: boolean;
@@ -16,12 +16,7 @@ type Props = {
   totalSteps?: number;
 };
 
-export default function CreateInstructorModal({
-  open,
-  onClose,
-  onContinue,
-  currentStep = 1,
-}: Props) {
+export function CreateInstructorModal({ open, onClose, onContinue, currentStep = 1 }: Props) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -90,21 +85,24 @@ export default function CreateInstructorModal({
     setStep(1);
   }
 
-  function extractApiError(err: unknown): { status?: number; message?: string; data?: unknown } {
-    if (typeof err === "object" && err !== null && "response" in err) {
-      const e = err as { response?: { status?: number; data?: unknown; statusText?: string } };
-      const resp = e.response;
-      const data = resp?.data;
-      let message: string | undefined;
-      if (typeof data === "object" && data !== null) {
-        const d = data as Record<string, unknown>;
-        if (typeof d.message === "string") message = d.message;
-        else if (typeof d.error === "string") message = d.error;
+  function resolveErrorMessage(err: unknown, fallback: string) {
+    if (typeof err === "string") return err;
+    if (err && typeof err === "object") {
+      if ("message" in err && typeof (err as { message?: string }).message === "string") {
+        return (err as { message?: string }).message as string;
       }
-      message = message || resp?.statusText || (err instanceof Error ? err.message : undefined);
-      return { status: resp?.status, message, data };
+      const maybeContext = (err as { context?: unknown }).context;
+      if (maybeContext && typeof maybeContext === "object" && "response" in maybeContext) {
+        const response = (maybeContext as { response?: unknown }).response;
+        if (response && typeof response === "object") {
+          const data = (response as { error?: string; message?: string }).error
+            ? (response as { error?: string }).error
+            : (response as { message?: string }).message;
+          if (typeof data === "string") return data;
+        }
+      }
     }
-    return { message: typeof err === "string" ? err : err instanceof Error ? err.message : undefined };
+    return fallback;
   }
 
   function handleCancel() {
@@ -152,24 +150,25 @@ export default function CreateInstructorModal({
     try {
       if (tutorId) {
         const body = { password: password || undefined, topics: [], about: about.trim() };
-        const upd = await api.put(`/tutors/${tutorId}`, body);
-        if (upd.status >= 400) {
-          const payload = upd.data ?? {};
-          const message = payload?.message || payload?.error || "Erro ao atualizar instrutor";
-          toast.error(message);
-          return;
-        }
+        const updated = await invokeFunction<Record<string, unknown>>("tutor", {
+          method: "PUT",
+          body: { tutorId, ...body },
+        });
         if (file) {
           const fd = new FormData();
           fd.append("photo", file);
+          fd.append("tutorId", String(tutorId));
           try {
-            await api.post(`/tutors/${tutorId}/photo`, fd);
+            await invokeFunction("tutor-photo", {
+              method: "POST",
+              body: fd,
+            });
           } catch (err: unknown) {
-            const info = extractApiError(err);
+            console.error("upload tutor photo error", err);
             toast.error("Instrutor atualizado, mas falha ao enviar foto.");
           }
         }
-        const data = upd.data ?? { id: tutorId };
+        const data = updated ?? { id: tutorId };
         toast.success("Instrutor atualizado com sucesso.");
         try {
           window.dispatchEvent(new CustomEvent("tutor:created", { detail: data }));
@@ -198,44 +197,36 @@ export default function CreateInstructorModal({
       };
 
       try {
-        const res = await api.post("/tutors", body);
-        if (res.status === 201) {
-          const data = res.data as Record<string, unknown>;
-          const createdId = data?.id ?? data?.tutorId ?? data?._id ?? null;
-          if (file && createdId) {
-            const fd = new FormData();
-            fd.append("photo", file);
-            try {
-              await api.post(`/tutors/${createdId}/photo`, fd);
-            } catch (err: unknown) {
-              const info = extractApiError(err);
-              toast.error("Instrutor criado, mas falha ao enviar foto.");
-            }
-          }
-          toast.success("Instrutor criado com sucesso.");
+        const created = await invokeFunction<Record<string, unknown>>("tutor", {
+          method: "POST",
+          body,
+        });
+        const createdId = created?.id ?? created?.tutorId ?? created?._id ?? null;
+        if (file && createdId) {
+          const fd = new FormData();
+          fd.append("photo", file);
+          fd.append("tutorId", String(createdId));
           try {
-            window.dispatchEvent(new CustomEvent("tutor:created", { detail: data }));
-          } catch {}
-          onContinue?.(data as Record<string, unknown>);
-          resetForm();
-          onClose();
-        } else {
-          const payload = res.data ?? null;
-          const message = payload?.message || payload?.error || "Erro ao criar instrutor";
-          toast.error(message);
+            await invokeFunction("tutor-photo", { method: "POST", body: fd });
+          } catch (err: unknown) {
+            console.error("upload tutor photo error", err);
+            toast.error("Instrutor criado, mas falha ao enviar foto.");
+          }
         }
+        toast.success("Instrutor criado com sucesso.");
+        try {
+          window.dispatchEvent(new CustomEvent("tutor:created", { detail: created }));
+        } catch {}
+        onContinue?.((created ?? body) as Record<string, unknown>);
+        resetForm();
+        onClose();
       } catch (err: unknown) {
-        const info = extractApiError(err);
-        const data = info.data;
-        const serverMessage =
-          (typeof data === "object" && data !== null && ((data as Record<string, unknown>).error as string | undefined)) ||
-          (typeof data === "object" && data !== null && ((data as Record<string, unknown>).message as string | undefined)) ||
-          (info.status && info.status >= 500 ? "Erro no servidor" : "Erro ao criar instrutor") ||
-          info.message;
-        toast.error(String(serverMessage));
+        const message = resolveErrorMessage(err, "Erro ao criar instrutor");
+        toast.error(message);
       }
-    } catch {
-      toast.error("Erro inesperado ao criar/atualizar instrutor.");
+    } catch (err) {
+      const message = resolveErrorMessage(err, "Erro inesperado ao criar/atualizar instrutor.");
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -290,7 +281,11 @@ export default function CreateInstructorModal({
         onClose();
       }}
       title="Cadastrar instrutor"
-      subtitle={step === 1 ? "Adicione as informações desse instrutor" : "Confirme as suas escolhas anteriores"}
+      subtitle={
+        step === 1
+          ? "Adicione as informações desse instrutor"
+          : "Confirme as suas escolhas anteriores"
+      }
       top={<ProgressBar total={2} current={step} />}
       footer={step === 1 ? footerStep1 : footerStep2}
       maxWidth="max-w-[520px]"
@@ -309,7 +304,7 @@ export default function CreateInstructorModal({
             style={{ transform: step === 1 ? "translateX(0%)" : "translateX(-50%)" }}
           >
             <div className="w-full" ref={step1Ref}>
-              <InstructorFormStep1
+              <InstructorForm
                 name={name}
                 setName={setName}
                 email={email}
@@ -333,7 +328,7 @@ export default function CreateInstructorModal({
               />
             </div>
             <div className="w-full" ref={step2Ref}>
-              <Step2Summary name={name} role={role} email={email} phone={phone} about={about} />
+              <Summary name={name} role={role} email={email} phone={phone} about={about} />
             </div>
           </div>
         </div>

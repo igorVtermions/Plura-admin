@@ -3,8 +3,8 @@ import { Phone, User as UserIcon } from "lucide-react";
 import Image from "@/components/ui/Image";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import type { InstructorProfile } from "../../types";
-import type { InstructorStatusMeta } from "../../visuals";
+import type { InstructorProfile } from "@/types/tutor";
+import type { InstructorStatusMeta } from "./visuals";
 
 type Props = {
   profile: InstructorProfile;
@@ -14,13 +14,7 @@ type Props = {
   deleting: boolean;
 };
 
-export default function InstructorHero({
-  profile,
-  statusMeta,
-  onEdit,
-  onDelete,
-  deleting,
-}: Props) {
+export function InstructorHero({ profile, statusMeta, onEdit, onDelete, deleting }: Props) {
   const identifier = profile.codename
     ? `@${profile.codename.replace(/^@/, "")}`
     : profile.email ?? profile.phone ?? "Sem identificador";
@@ -87,9 +81,7 @@ export default function InstructorHero({
               {profile.phone}
             </span>
           ) : (
-            <span className="text-xs text-[#8A94AB]">
-              Sem informações de contato registradas.
-            </span>
+            <span className="text-xs text-[#8A94AB]">Sem informações de contato registradas.</span>
           )}
         </div>
 

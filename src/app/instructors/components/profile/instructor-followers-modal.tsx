@@ -4,7 +4,7 @@ import { User as UserIcon } from "lucide-react";
 import Modal from "@/components/ui/Modal";
 import Image from "@/components/ui/Image";
 import { Button } from "@/components/ui/button";
-import type { InstructorFollower, InstructorFollowersResult } from "../../types";
+import type { InstructorFollower, InstructorFollowersResult } from "@/types/tutor";
 
 type LoaderFn = (tutorId: string, page?: number) => Promise<InstructorFollowersResult>;
 
@@ -33,7 +33,7 @@ const INITIAL_STATE: State = {
   total: null,
 };
 
-const InstructorFollowersModal: React.FC<Props> = ({
+export const InstructorFollowersModal: React.FC<Props> = ({
   open,
   onClose,
   tutorId,
@@ -162,9 +162,7 @@ const InstructorFollowersModal: React.FC<Props> = ({
                     )}
                   </div>
                   <div className="text-left">
-                    <div className="text-sm font-semibold text-[#2B1F58]">
-                      {follower.name}
-                    </div>
+                    <div className="text-sm font-semibold text-[#2B1F58]">{follower.name}</div>
                     <div className="text-xs text-[#5A6480]">
                       {follower.codename
                         ? `@${follower.codename.replace(/^@/, "")}`
@@ -172,9 +170,7 @@ const InstructorFollowersModal: React.FC<Props> = ({
                     </div>
                   </div>
                 </div>
-                {joinedDate && (
-                  <span className="text-xs text-[#8A94AB]">Desde {joinedDate}</span>
-                )}
+                {joinedDate && <span className="text-xs text-[#8A94AB]">Desde {joinedDate}</span>}
               </div>
             );
           })}
@@ -205,5 +201,3 @@ const InstructorFollowersModal: React.FC<Props> = ({
     </Modal>
   );
 };
-
-export default InstructorFollowersModal;

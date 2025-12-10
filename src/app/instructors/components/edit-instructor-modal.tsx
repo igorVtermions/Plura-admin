@@ -7,17 +7,14 @@ import Modal from "@/components/ui/Modal";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import AvatarPicker from "./AvatarPicker";
+import { AvatarPicker } from "./avatar-picker";
 import {
   adaptInstructor,
   fetchInstructorProfile,
   updateInstructor,
   type UpdateInstructorPayload,
-} from "@/features/instructors/api";
-import type {
-  InstructorCardData,
-  InstructorProfile,
-} from "@/features/instructors/types";
+} from "@/services/tutor";
+import type { InstructorCardData, InstructorProfile } from "@/types/tutor";
 
 type Props = {
   open: boolean;
@@ -58,7 +55,7 @@ function toApiPhone(digits: string): string | null {
   return normalized.startsWith("55") ? `+${normalized}` : `+55${normalized}`;
 }
 
-export default function EditInstructorModal({
+export function EditInstructorModal({
   open,
   tutorId,
   onClose,
@@ -168,15 +165,7 @@ export default function EditInstructorModal({
   }
 
   function handlePhoneKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
-    const allowedKeys = [
-      "Backspace",
-      "Delete",
-      "ArrowLeft",
-      "ArrowRight",
-      "Home",
-      "End",
-      "Tab",
-    ];
+    const allowedKeys = ["Backspace", "Delete", "ArrowLeft", "ArrowRight", "Home", "End", "Tab"];
     if (allowedKeys.includes(event.key)) return;
     if (!/^[0-9]$/.test(event.key)) event.preventDefault();
   }
@@ -234,8 +223,7 @@ export default function EditInstructorModal({
         photoFile: file,
       });
 
-      const refreshed =
-        updatedProfile ?? (await fetchInstructorProfile(tutorId).catch(() => null));
+      const refreshed = updatedProfile ?? (await fetchInstructorProfile(tutorId).catch(() => null));
 
       if (refreshed) {
         setProfile(refreshed);

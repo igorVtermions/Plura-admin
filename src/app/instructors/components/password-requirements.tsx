@@ -1,13 +1,11 @@
 "use client";
 
-import React from "react";
-
 type Props = {
   password: string;
   focused: boolean;
 };
 
-export default function PasswordRequirements({ password, focused }: Props) {
+export function PasswordRequirements({ password, focused }: Props) {
   const hasNumber = /\d/.test(password);
   const hasUpper = /[A-Z]/.test(password);
   const hasLower = /[a-z]/.test(password);

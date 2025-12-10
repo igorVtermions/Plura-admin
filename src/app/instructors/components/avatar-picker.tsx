@@ -10,7 +10,7 @@ type Props = {
   initialImageUrl?: string | null;
 };
 
-export default function AvatarPicker({
+export function AvatarPicker({
   file,
   onChange,
   ariaLabel = "Alterar foto",
@@ -70,11 +70,7 @@ export default function AvatarPicker({
           }}
         >
           {avatarPreview ? (
-            <img
-              src={avatarPreview}
-              alt="avatar"
-              className="h-24 w-24 rounded-full object-cover"
-            />
+            <img src={avatarPreview} alt="avatar" className="h-24 w-24 rounded-full object-cover" />
           ) : (
             <div className="flex h-24 w-24 items-center justify-center">
               <Image src="/User.svg" alt="User" width={48} height={48} />

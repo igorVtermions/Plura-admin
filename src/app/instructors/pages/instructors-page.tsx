@@ -6,15 +6,11 @@ import toast from "react-hot-toast";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import Pagination from "../components/Pagination";
-import InstructorCard from "../components/InstructorCard";
-import EditInstructorModal from "@/components/instructor/EditInstructorModal";
-import { adaptInstructor, fetchInstructors, deleteInstructor } from "../api";
-import type {
-  InstructorCardData,
-  InstructorListMeta,
-  InstructorStatus,
-} from "../types";
+import Pagination from "../components/pagination";
+import { InstructorCard } from "../components/instructor-card";
+import { EditInstructorModal } from "@/app/instructors/components/edit-instructor-modal";
+import { adaptInstructor, fetchInstructors, deleteInstructor } from "@/services/tutor";
+import type { InstructorCardData, InstructorListMeta, InstructorStatus } from "@/types/tutor";
 import { useNavigate } from "react-router-dom";
 
 type FilterKey = "all" | Extract<InstructorStatus, "active" | "pending" | "banned">;
@@ -30,7 +26,7 @@ const FILTERS: Array<{ key: FilterKey; label: string }> = [
 
 const SKELETON_COUNT = 6;
 
-export default function InstructorsPage() {
+export function InstructorsPage() {
   const navigate = useNavigate();
   const [filter, setFilter] = useState<FilterKey>("all");
   const [searchInput, setSearchInput] = useState("");
@@ -85,8 +81,7 @@ export default function InstructorsPage() {
 
         const total =
           typeof response.meta.total === "number" ? response.meta.total : adapted.length;
-        const currentPage =
-          typeof response.meta.page === "number" ? response.meta.page : page;
+        const currentPage = typeof response.meta.page === "number" ? response.meta.page : page;
         const limit =
           typeof response.meta.perPage === "number" && response.meta.perPage > 0
             ? response.meta.perPage
@@ -155,22 +150,17 @@ export default function InstructorsPage() {
 
       setInstructors((prev) => prev.filter((item) => item.id !== id));
       setMeta((prev) => {
-        const nextTotal =
-          typeof prev.total === "number" ? Math.max(prev.total - 1, 0) : prev.total;
+        const nextTotal = typeof prev.total === "number" ? Math.max(prev.total - 1, 0) : prev.total;
         const perPageValue =
           typeof prev.perPage === "number" && prev.perPage > 0 ? prev.perPage : perPage;
         const nextTotalPages =
           typeof nextTotal === "number"
             ? Math.max(1, Math.ceil(nextTotal / perPageValue))
             : prev.totalPages;
-        const currentPageValue =
-          typeof prev.page === "number" ? prev.page : page;
+        const currentPageValue = typeof prev.page === "number" ? prev.page : page;
         let nextPage = currentPageValue;
 
-        if (
-          typeof currentPageValue === "number" &&
-          typeof nextTotalPages === "number"
-        ) {
+        if (typeof currentPageValue === "number" && typeof nextTotalPages === "number") {
           nextPage = Math.min(currentPageValue, nextTotalPages);
         }
 
@@ -199,9 +189,7 @@ export default function InstructorsPage() {
   };
 
   const handleInstructorUpdated = (updated: InstructorCardData) => {
-    setInstructors((prev) =>
-      prev.map((item) => (item.id === updated.id ? updated : item)),
-    );
+    setInstructors((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
     setSelectedInstructor(updated);
     handleReload();
   };
@@ -265,7 +253,6 @@ export default function InstructorsPage() {
           {!loading && instructors.length === 0 && !error && (
             <div className="col-span-full rounded-2xl border border-dashed border-[#D0D9F1] p-6 text-center text-[#5A6480]">
               <div>Nenhum instrutor encontrado com os filtros atuais.</div>
-              
             </div>
           )}
         </section>

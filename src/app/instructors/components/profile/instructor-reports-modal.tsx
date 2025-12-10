@@ -1,7 +1,7 @@
 import React, { useMemo } from "react";
 import Modal from "@/components/ui/Modal";
-import { formatDateTime } from "@/features/users/profile-formatters";
-import type { InstructorProfileReport } from "../../types";
+import { formatDateTime } from "@/app/users/utils/profile-formatters";
+import type { InstructorProfileReport } from "@/types/tutor";
 
 type Props = {
   open: boolean;
@@ -12,15 +12,14 @@ type Props = {
 
 function buildCountLabel(items: InstructorProfileReport[], total?: number | null): string {
   if (items.length === 0) return "";
-  const effectiveTotal =
-    typeof total === "number" && total >= items.length ? total : items.length;
+  const effectiveTotal = typeof total === "number" && total >= items.length ? total : items.length;
   if (effectiveTotal === items.length) {
     return `${items.length} ${items.length === 1 ? "denúncia" : "denúncias"}`;
   }
   return `${items.length} de ${effectiveTotal} denúncias`;
 }
 
-const InstructorReportsModal: React.FC<Props> = ({ open, onClose, reports, total }) => {
+export const InstructorReportsModal: React.FC<Props> = ({ open, onClose, reports, total }) => {
   const items = useMemo(() => reports ?? [], [reports]);
   const countLabel = buildCountLabel(items, total);
 
@@ -40,10 +39,7 @@ const InstructorReportsModal: React.FC<Props> = ({ open, onClose, reports, total
         ) : (
           <div className="space-y-3">
             {items.map((report) => (
-              <article
-                key={report.id}
-                className="rounded-2xl border border-[#E2E8F8] bg-white p-5"
-              >
+              <article key={report.id} className="rounded-2xl border border-[#E2E8F8] bg-white p-5">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <p className="text-sm font-semibold text-[#2B1F58]">
@@ -75,5 +71,3 @@ const InstructorReportsModal: React.FC<Props> = ({ open, onClose, reports, total
     </Modal>
   );
 };
-
-export default InstructorReportsModal;
