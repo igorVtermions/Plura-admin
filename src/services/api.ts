@@ -1,33 +1,75 @@
 import axios from "axios";
 import { createClient } from "@supabase/supabase-js";
 
-const API_BASE =
-  import.meta.env.VITE_API_URL ??
-  "https://p1tct9i4re.execute-api.sa-east-1.amazonaws.com/api";
-
+const apiBase = import.meta.env.VITE_API_URL;
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn("Supabase URL or Anon Key is missing from .env files. Supabase client will not be initialized.");
+  console.warn(
+    "Supabase URL or Anon Key is missing from .env files. Supabase client will not be initialized.",
+  );
 }
 
-export const supabase = supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey) : undefined;
+export const supabase =
+  supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey) : undefined;
+
+type InvokeHeaders = Record<string, string>;
+
+function shouldSerializeBody(body: unknown): body is Record<string, unknown> | unknown[] {
+  if (!body || typeof body !== "object") return false;
+  if (body instanceof FormData) return false;
+  if (body instanceof Blob) return false;
+  if (body instanceof ArrayBuffer) return false;
+  if (ArrayBuffer.isView(body)) return false;
+  if (body instanceof URLSearchParams) return false;
+  return true;
+}
+
+function withAuthHeader(headers: InvokeHeaders = {}): InvokeHeaders {
+  const next = { ...headers };
+  try {
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("token");
+      if (token && !next.Authorization) {
+        next.Authorization = `Bearer ${token}`;
+      }
+    }
+  } catch {
+    // ignore storage errors
+  }
+  return next;
+}
 
 export async function invokeFunction<T = unknown>(
   functionName: string,
   options: {
-    method?: 'POST' | 'GET' | 'PUT' | 'DELETE';
+    method: "POST" | "GET" | "PUT" | "DELETE" | "PATCH";
     body?: Record<string, unknown> | BodyInit;
-    headers?: Record<string, string>;
-  } = {}
+    headers?: InvokeHeaders;
+  } = {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  },
 ) {
   if (!supabase) {
     throw new Error("Supabase client is not initialized. Check your .env configuration.");
   }
+
+  const headers = withAuthHeader(options.headers);
+  let preparedBody = options.body;
+
+  if (shouldSerializeBody(options.body)) {
+    preparedBody = JSON.stringify(options.body);
+    if (!headers["Content-Type"]) headers["Content-Type"] = "application/json";
+  }
+
   const { data, error } = await supabase.functions.invoke<T>(functionName, {
     ...options,
-    body: options.body && typeof options.body === 'object' ? JSON.stringify(options.body) : options.body,
+    headers,
+    body: preparedBody,
   });
 
   if (error) {
@@ -39,8 +81,11 @@ export async function invokeFunction<T = unknown>(
 }
 
 const api = axios.create({
-  baseURL: API_BASE,
+  baseURL: apiBase,
   timeout: 10000,
+  headers: {
+    "Content-Type": "application/json",
+  },
 });
 
 api.interceptors.request.use((config) => {
@@ -67,7 +112,7 @@ api.interceptors.response.use(
       location.assign("/");
     }
     return Promise.reject(error);
-  }
+  },
 );
 
 export function setClientToken(token?: string | null) {
