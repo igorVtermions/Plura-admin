@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "@/lib/router";
-import Header from "./header";
+import { Header } from "./header";
 
 function normalizePath(raw: string) {
   let p = (raw || "/").split(/[?#]/)[0].replace(/\/$/, "");
@@ -18,7 +18,7 @@ function normalizePath(raw: string) {
   return p;
 }
 
-export default function HeaderWrapper() {
+export function HeaderWrapper() {
   const pathname = usePathname() ?? "/";
   const p = normalizePath(pathname);
   const hidePaths = [
@@ -28,6 +28,7 @@ export default function HeaderWrapper() {
     "/reset-password",
     "/password/reset",
     "/verify",
+    "/login",
   ];
 
   const isAuthPath = hidePaths.some((path) => p === path || p.startsWith(path + "/"));

@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import Link from "@/components/router/Link";
+import Link from "@/router/Link";
 import { usePathname } from "@/lib/router";
 import { useSidebar } from "./sidebar-context";
 
@@ -118,10 +118,19 @@ export function Sidebar() {
               viewBox="0 0 24 24"
               fill="none"
               xmlns="http://www.w3.org/2000/svg"
-              style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 200ms ease" }}
+              style={{
+                transform: open ? "rotate(180deg)" : "rotate(0deg)",
+                transition: "transform 200ms ease",
+              }}
               aria-hidden
             >
-              <path d="M6 9l6 6 6-6" stroke="#425066" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              <path
+                d="M6 9l6 6 6-6"
+                stroke="#425066"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
             </svg>
           </button>
         </div>

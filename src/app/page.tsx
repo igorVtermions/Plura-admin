@@ -1,4 +1,4 @@
-import LoginPage from "@/features/auth/pages/login-page";
+import LoginPage from "@/app/auth/pages/login-page";
 
 export const metadata = { title: "Login | Plura Talks - Administrador" };
 
