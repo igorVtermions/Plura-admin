@@ -51,4 +51,3 @@ export function SessionCard({ variant, title, speaker, time }: Props) {
     </Card>
   );
 }
-

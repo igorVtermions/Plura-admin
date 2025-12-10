@@ -20,7 +20,7 @@ type Props = {
   setSelectedTutor: (t: Tutor | null) => void;
 };
 
-export default function Step1Basics(props: Props, ref: React.ForwardedRef<HTMLDivElement>) {
+export function FirstSteps(props: Props, ref: React.ForwardedRef<HTMLDivElement>) {
   const { title, setTitle, startAt, setStartAt, endAt, setEndAt, tutors, selectedTutor, setSelectedTutor } = props;
 
   const [tutorQuery, setTutorQuery] = React.useState("");
@@ -154,7 +154,7 @@ export default function Step1Basics(props: Props, ref: React.ForwardedRef<HTMLDi
   );
 }
 
-export const ForwardedStep1Basics = React.forwardRef<HTMLDivElement, Props>(Step1Basics);
+export const ForwardedStep1Basics = React.forwardRef<HTMLDivElement, Props>(FirstSteps);
 
 
 

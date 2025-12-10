@@ -2,13 +2,21 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import Modal from "@/components/ui/Modal";
-import ProgressBar from "@/components/instructor/ProgressBar";
-import { ForwardedStep1Basics } from "./Step1Basics";
-import { ForwardedStep2Topics } from "./Step2Topics";
-import { ForwardedStep3Summary } from "./Step3Summary";
-import api from "@/services/api";
+import { ProgressBar } from "@/app/instructors/components/progress-bar";
+import { ForwardedStep1Basics } from "./first-steps";
+import { ForwardedStep2Topics } from "./topics-step";
+import { ForwardedStep3Summary } from "./summary-step";
+import api, { invokeFunction } from "@/services/api";
 import toast from "react-hot-toast";
 
+type TutorSession = {
+  about: string;
+  followersCount: number;
+  id: number;
+  name: string;
+  photoUrl: string;
+  role: string;
+};
 type Tutor = { id: string | number; name: string };
 const topicsMap = {
   depressao: "Depressão",
@@ -20,6 +28,7 @@ const topicsMap = {
   desanimo: "Desânimo",
   outros: "Outros",
 } as const;
+
 type ReceivedTutor = {
   id?: string | number;
   _id?: string | number;
@@ -36,7 +45,7 @@ type Props = {
   tutorOptions?: Tutor[];
 };
 
-export default function CreateSessionModal({ open, onClose, onContinue, tutorOptions }: Props) {
+export function CreateSessionModal({ open, onClose, onContinue, tutorOptions }: Props) {
   const [step, setStep] = React.useState(1);
   const [allowOverflow, setAllowOverflow] = React.useState(false);
 
@@ -65,12 +74,18 @@ export default function CreateSessionModal({ open, onClose, onContinue, tutorOpt
     if (!open) return;
     (async () => {
       try {
-        const res = await api.get("/tutors");
-        const data = Array.isArray(res.data) ? res.data : res.data?.items || [];
-        const mapped: Tutor[] = (data as ReceivedTutor[])
-          .map((t) => ({
-            id: t.id ?? t._id ?? t.tutorId ?? t.uuid ?? String(t.name ?? t.fullName ?? "unknown"),
-            name: t.name ?? t.fullName ?? "Sem nome",
+        const result = await api({
+          url: "user-tutor-list?action=list",
+          method: "GET",
+          params: {
+            page: 1,
+            perPage: 100,
+          },
+        });
+        const mapped: Tutor[] = (result.data.tutors ?? [])
+          .map((tutor: TutorSession) => ({
+            id: tutor.id,
+            name: tutor.name,
           }))
           .filter((t: Tutor) => !!t.name);
         setTutors(mapped);
@@ -112,14 +127,14 @@ export default function CreateSessionModal({ open, onClose, onContinue, tutorOpt
     if (!open || step !== 2) return;
     (async () => {
       try {
-        const res = await api.get("/tutors/topics/available");
-        const data = Array.isArray(res.data) ? res.data : res.data?.items || [];
-        const list = (data as unknown[])
-          .map((v) => (typeof v === "string" ? v : null))
-          .filter((v): v is string => !!v);
-        setTopicsAvailable(list);
+        console.log();
+        const result = await api({
+          url: "tutor-topics?action=",
+          method: "GET",
+        });
+        setTopicsAvailable(result.data.map((topic: any) => topic.name));
       } catch {
-        setTopicsAvailable(Object.keys(topicsMap));
+        // setTopicsAvailable(Object.keys(topicsMap));
       }
     })();
   }, [open, step]);
@@ -199,40 +214,31 @@ export default function CreateSessionModal({ open, onClose, onContinue, tutorOpt
         endAt: endAt?.toISOString(),
         topics: selectedTopics,
       } as const;
-      const res = await api.post("/admin/live-chat-rooms", body);
-      if (res.status >= 200 && res.status < 300) {
-        toast.success("Sessão criada com sucesso.");
-        try {
-          window.dispatchEvent(new CustomEvent("session:created", { detail: res.data }));
-        } catch {}
-        onContinue?.(res.data ?? body);
-        clearAll();
-        onClose();
-      } else {
-        const payload = res.data ?? null;
-        const message = (payload && (payload.message || payload.error)) || "Erro ao criar sessão";
-        toast.error(String(message));
-      }
-    } catch (err: unknown) {
-      const e = err as { response?: { status?: number; data?: unknown }; message?: string };
-      const status = e.response?.status;
-      const data = e.response?.data;
-      let message: string | undefined;
 
-      if (data && typeof data === "object") {
-        const payload = data as Record<string, unknown>;
-        const maybe = payload.message ?? payload.error;
-        if (typeof maybe === "string") message = maybe;
+      /*
+        name?: string;
+        title?: string;
+        description?: string;
+        startAt?: string;
+        endAt?: string;
+        topics?: string[];
+      */
+      const created = await invokeFunction<Record<string, unknown>>("live-chat-room", {
+        method: "POST",
+        body,
+      });
+      toast.success("Sessão criada com sucesso.");
+      try {
+        window.dispatchEvent(new CustomEvent("session:created", { detail: created }));
+      } catch {
+        // ignore event errors
       }
-
-      if (!message) {
-        message =
-          status === 409
-            ? "Conflito de horário para este instrutor."
-            : (e.message ?? "Erro ao criar sessão");
-      }
-
-      toast.error(String(message));
+      onContinue?.(created ?? body);
+      clearAll();
+      onClose();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Erro ao criar sessão";
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -278,103 +284,104 @@ export default function CreateSessionModal({ open, onClose, onContinue, tutorOpt
       </button>
     </div>
   );
-  function TutorSelect({
-    tutors,
-    value,
-    onChange,
-    placeholder = "Escolha um tutor",
-  }: {
-    tutors: Tutor[];
-    value: Tutor | null;
-    onChange: (t: Tutor | null) => void;
-    placeholder?: string;
-  }) {
-    const [open, setOpen] = useState(false);
-    const [query, setQuery] = useState(value ? value.name : "");
-    const ref = useRef<HTMLDivElement | null>(null);
 
-    useEffect(() => {
-      function onDoc(e: MouseEvent) {
-        if (!ref.current) return;
-        if (!ref.current.contains(e.target as Node)) setOpen(false);
-      }
-      document.addEventListener("mousedown", onDoc);
-      return () => document.removeEventListener("mousedown", onDoc);
-    }, []);
+  // function TutorSelect({
+  //   tutors,
+  //   value,
+  //   onChange,
+  //   placeholder = "Escolha um tutor",
+  // }: {
+  //   tutors: Tutor[];
+  //   value: Tutor | null;
+  //   onChange: (t: Tutor | null) => void;
+  //   placeholder?: string;
+  // }) {
+  //   const [open, setOpen] = useState(false);
+  //   const [query, setQuery] = useState(value ? value.name : "");
+  //   const ref = useRef<HTMLDivElement | null>(null);
 
-    useEffect(() => {
-      setQuery(value ? value.name : "");
-    }, [value]);
+  //   useEffect(() => {
+  //     function onDoc(e: MouseEvent) {
+  //       if (!ref.current) return;
+  //       if (!ref.current.contains(e.target as Node)) setOpen(false);
+  //     }
+  //     document.addEventListener("mousedown", onDoc);
+  //     return () => document.removeEventListener("mousedown", onDoc);
+  //   }, []);
 
-    const filtered = tutors
-      .filter((t) => String(t.name).toLowerCase().includes(query.trim().toLowerCase()))
-      .slice(0, 50);
-    return (
-      <div ref={ref} className="relative w-full">
-        <div className="flex items-center gap-2">
-          <input
-            value={query}
-            onChange={(e) => {
-              setQuery(e.target.value);
-              setOpen(true);
-            }}
-            onFocus={() => setOpen(true)}
-            placeholder={placeholder}
-            className="w-full px-3 py-2 border border-[#D0D9F1] rounded-md bg-white focus:outline-none"
-          />
-          {value ? (
-            <button
-              type="button"
-              aria-label="Limpar tutor"
-              onClick={() => {
-                onChange(null);
-                setQuery("");
-                setOpen(false);
-              }}
-              className="text-sm px-2 py-1 text-[#7682A5]"
-            >
-              ✕
-            </button>
-          ) : (
-            <button
-              type="button"
-              aria-label="Abrir lista de tutores"
-              onClick={() => setOpen((s) => !s)}
-              className="text-sm px-2 py-1 text-[#7682A5]"
-            >
-              ▾
-            </button>
-          )}
-        </div>
+  //   useEffect(() => {
+  //     setQuery(value ? value.name : "");
+  //   }, [value]);
 
-        {open && (
-          <div className="absolute left-0 right-0 mt-2 z-40 bg-white border border-[#E9EDF6] rounded-md shadow-sm max-h-[9rem] overflow-auto">
-            <ul className="divide-y divide-[#F1F4FB]">
-              {filtered.length === 0 ? (
-                <li className="px-3 py-2 text-sm text-[#808DB2]">Nenhum tutor encontrado</li>
-              ) : (
-                filtered.map((t) => (
-                  <li key={t.id}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onChange(t);
-                        setQuery(String(t.name));
-                        setOpen(false);
-                      }}
-                      className="w-full text-left px-3 py-2 hover:bg-[#F5F8FF] text-sm"
-                    >
-                      {t.name}
-                    </button>
-                  </li>
-                ))
-              )}
-            </ul>
-          </div>
-        )}
-      </div>
-    );
-  }
+  //   const filtered = tutors
+  //     .filter((t) => String(t.name).toLowerCase().includes(query.trim().toLowerCase()))
+  //     .slice(0, 50);
+  //   return (
+  //     <div ref={ref} className="relative w-full">
+  //       <div className="flex items-center gap-2">
+  //         <input
+  //           value={query}
+  //           onChange={(e) => {
+  //             setQuery(e.target.value);
+  //             setOpen(true);
+  //           }}
+  //           onFocus={() => setOpen(true)}
+  //           placeholder={placeholder}
+  //           className="w-full px-3 py-2 border border-[#D0D9F1] rounded-md bg-white focus:outline-none"
+  //         />
+  //         {value ? (
+  //           <button
+  //             type="button"
+  //             aria-label="Limpar tutor"
+  //             onClick={() => {
+  //               onChange(null);
+  //               setQuery("");
+  //               setOpen(false);
+  //             }}
+  //             className="text-sm px-2 py-1 text-[#7682A5]"
+  //           >
+  //             ✕
+  //           </button>
+  //         ) : (
+  //           <button
+  //             type="button"
+  //             aria-label="Abrir lista de tutores"
+  //             onClick={() => setOpen((s) => !s)}
+  //             className="text-sm px-2 py-1 text-[#7682A5]"
+  //           >
+  //             ▾
+  //           </button>
+  //         )}
+  //       </div>
+
+  //       {open && (
+  //         <div className="absolute left-0 right-0 mt-2 z-40 bg-white border border-[#E9EDF6] rounded-md shadow-sm max-h-[9rem] overflow-auto">
+  //           <ul className="divide-y divide-[#F1F4FB]">
+  //             {filtered.length === 0 ? (
+  //               <li className="px-3 py-2 text-sm text-[#808DB2]">Nenhum tutor encontrado</li>
+  //             ) : (
+  //               filtered.map((t) => (
+  //                 <li key={t.id}>
+  //                   <button
+  //                     type="button"
+  //                     onClick={() => {
+  //                       onChange(t);
+  //                       setQuery(String(t.name));
+  //                       setOpen(false);
+  //                     }}
+  //                     className="w-full text-left px-3 py-2 hover:bg-[#F5F8FF] text-sm"
+  //                   >
+  //                     {t.name}
+  //                   </button>
+  //                 </li>
+  //               ))
+  //             )}
+  //           </ul>
+  //         </div>
+  //       )}
+  //     </div>
+  //   );
+  // }
 
   return (
     <Modal
@@ -385,8 +392,8 @@ export default function CreateSessionModal({ open, onClose, onContinue, tutorOpt
         step === 2
           ? "Atribua os tópicos que serão assunto dessa sessão"
           : step === 3
-            ? "Confirme as suas escolhas anteriores"
-            : "Configure as informações da sala"
+          ? "Confirme as suas escolhas anteriores"
+          : "Configure as informações da sala"
       }
       top={<ProgressBar total={3} current={step} />}
       footer={step === 1 ? footerStep1 : footerStepNext}
@@ -409,8 +416,8 @@ export default function CreateSessionModal({ open, onClose, onContinue, tutorOpt
                 step === 1
                   ? "translateX(0%)"
                   : step === 2
-                    ? "translateX(-33.3333%)"
-                    : "translateX(-66.6667%)",
+                  ? "translateX(-33.3333%)"
+                  : "translateX(-66.6667%)",
             }}
           >
             <div className="w-full" ref={step1Ref}>
@@ -429,9 +436,7 @@ export default function CreateSessionModal({ open, onClose, onContinue, tutorOpt
 
             <div className="w-full" ref={step2Ref}>
               <ForwardedStep2Topics
-                topics={
-                  topicsAvailable.length ? topicsAvailable : (Object.keys(topicsMap) as string[])
-                }
+                topics={topicsAvailable}
                 labelMap={topicsMap as Record<string, string>}
                 selected={selectedTopics}
                 setSelected={setSelectedTopics}

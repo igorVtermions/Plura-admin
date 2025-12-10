@@ -9,7 +9,10 @@ type Props = {
   setSelected: (v: string[]) => void;
 };
 
-export default function Step2Topics({ topics, labelMap = {}, selected, setSelected }: Props, ref: React.ForwardedRef<HTMLDivElement>) {
+export function TopicsStep(
+  { topics, labelMap = {}, selected, setSelected }: Props,
+  ref: React.ForwardedRef<HTMLDivElement>,
+) {
   function toggle(k: string) {
     setSelected(selected.includes(k) ? selected.filter((x) => x !== k) : [...selected, k]);
   }
@@ -44,5 +47,4 @@ export default function Step2Topics({ topics, labelMap = {}, selected, setSelect
   );
 }
 
-export const ForwardedStep2Topics = React.forwardRef<HTMLDivElement, Props>(Step2Topics);
-
+export const ForwardedStep2Topics = React.forwardRef<HTMLDivElement, Props>(TopicsStep);
