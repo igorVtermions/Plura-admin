@@ -6,29 +6,10 @@ interface ChatCardProps {
   title: string;
   instructor: string;
   onlineCount: number;
+  onJoin?: () => void;
 }
 
-// /* Card/Room */
-
-// /* Auto layout */
-// display: flex;
-// flex-direction: column;
-// align-items: flex-start;
-// padding: 0px;
-// gap: 12px;
-
-// width: 362px;
-// height: 180px;
-
-
-// /* Inside auto layout */
-// flex: none;
-// order: 0;
-// align-self: stretch;
-// flex-grow: 1;
-
-
-export function ChatCard({ title, instructor, onlineCount }: ChatCardProps) {
+export function ChatCard({ title, instructor, onlineCount, onJoin }: ChatCardProps) {
   return (
     <div className="flex flex-col flex-start p-4 gap-1 rounded-xl bg-[#f3ebff] border border-[#D4C7FF]">
       <div className="space-y-1">
@@ -59,11 +40,12 @@ export function ChatCard({ title, instructor, onlineCount }: ChatCardProps) {
             className="rounded-full border-2 border-[#F3EBFF]"
           />
         </div>
-        <span className="text-sm font-medium text-black">
-          +{onlineCount} online
-        </span>
+        <span className="text-sm font-medium text-black">+{onlineCount} online</span>
       </div>
-      <Button className="mt-auto flex w-full items-center justify-center gap-3 rounded-2xl bg-[#A874F7] py-6 px-[16px] text-base font-semibold text-white hover:bg-[#9c68ea] border border-[#977CEC] active:scale-95 transition-all duration-100">
+      <Button
+        onClick={onJoin}
+        className="mt-auto flex w-full items-center justify-center gap-3 rounded-2xl bg-[#A874F7] py-6 px-[16px] text-base font-semibold text-white hover:bg-[#9c68ea] border border-[#977CEC] active:scale-95 transition-all duration-100"
+      >
         <LogIn className="size-6" />
         Ingressar na sala
       </Button>

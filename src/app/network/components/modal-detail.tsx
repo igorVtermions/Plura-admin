@@ -101,9 +101,7 @@ export function ModalDetail({
                     className="rounded-full"
                   />
                   <div>
-                    <p className="text-sm font-semibold text-[#0F1A3A]">
-                      {user.name}
-                    </p>
+                    <p className="text-sm font-semibold text-[#0F1A3A]">{user.name}</p>
                     <p className="text-xs text-[#7A819C]">{user.handle}</p>
                   </div>
                 </div>

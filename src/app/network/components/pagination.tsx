@@ -38,9 +38,7 @@ export const Pagination = ({ currentPage, totalPages, onPageChange }: Pagination
           key={page}
           variant={page === currentPage ? "default" : "ghost"}
           className={`h-9 w-9 rounded-full text-base ${
-            page === currentPage
-              ? "bg-[#A277FF] text-white"
-              : "text-[#7A6BAF]"
+            page === currentPage ? "bg-[#A277FF] text-white" : "text-[#7A6BAF]"
           }`}
           onClick={() => goToPage(page)}
         >
