@@ -2,9 +2,9 @@
 
 import React from "react";
 import Image from "@/components/ui/Image";
-import Link from "@/components/router/Link";
+import Link from "@/router/Link";
 
-export default function NotFoundPage() {
+export function NotFoundPage() {
   return (
     <div className="w-full h-full flex items-center justify-center p-8">
       <div
@@ -13,10 +13,15 @@ export default function NotFoundPage() {
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
           <div className="p-8 flex flex-col items-start justify-center gap-4">
-            <div className="text-[52px] font-bold leading-none" style={{ color: "#6B4DB8" }}>404</div>
-            <h1 className="text-[24px] font-medium" style={{ color: "#191F33" }}>Página não encontrada</h1>
+            <div className="text-[52px] font-bold leading-none" style={{ color: "#6B4DB8" }}>
+              404
+            </div>
+            <h1 className="text-[24px] font-medium" style={{ color: "#191F33" }}>
+              Página não encontrada
+            </h1>
             <p className="text-sm" style={{ color: "#5A6480" }}>
-              A página que você procura não existe ou foi movida. Verifique o endereço ou volte para a página inicial.
+              A página que você procura não existe ou foi movida. Verifique o endereço ou volte para
+              a página inicial.
             </p>
             <div className="flex items-center gap-3 mt-2">
               <Link
@@ -55,4 +60,3 @@ export default function NotFoundPage() {
     </div>
   );
 }
-
