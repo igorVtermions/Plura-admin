@@ -6,17 +6,11 @@ import { ProgressBar } from "@/app/instructors/components/progress-bar";
 import { ForwardedStep1Basics } from "./first-steps";
 import { ForwardedStep2Topics } from "./topics-step";
 import { ForwardedStep3Summary } from "./summary-step";
-import api, { invokeFunction } from "@/services/api";
+import { invokeFunction } from "@/services/api";
+import { adaptInstructor, fetchInstructors } from "@/services/tutor";
+import { extractTopicNames } from "./topic-utils";
 import toast from "react-hot-toast";
 
-type TutorSession = {
-  about: string;
-  followersCount: number;
-  id: number;
-  name: string;
-  photoUrl: string;
-  role: string;
-};
 type Tutor = { id: string | number; name: string };
 const topicsMap = {
   depressao: "Depressão",
@@ -29,15 +23,6 @@ const topicsMap = {
   outros: "Outros",
 } as const;
 
-type ReceivedTutor = {
-  id?: string | number;
-  _id?: string | number;
-  tutorId?: string | number;
-  uuid?: string | number;
-  name?: string;
-  fullName?: string;
-};
-
 type Props = {
   open: boolean;
   onClose: () => void;
@@ -46,7 +31,7 @@ type Props = {
 };
 
 export function CreateSessionModal({ open, onClose, onContinue, tutorOptions }: Props) {
-  const [step, setStep] = React.useState(1);
+  const [step, setStep] = React.useState<number>(1);
   const [allowOverflow, setAllowOverflow] = React.useState(false);
 
   const [title, setTitle] = React.useState("");
@@ -72,27 +57,31 @@ export function CreateSessionModal({ open, onClose, onContinue, tutorOptions }: 
       return;
     }
     if (!open) return;
+    let cancelled = false;
+
     (async () => {
       try {
-        const result = await api({
-          url: "user-tutor-list?action=list",
-          method: "GET",
-          params: {
-            page: 1,
-            perPage: 100,
-          },
-        });
-        const mapped: Tutor[] = (result.data.tutors ?? [])
-          .map((tutor: TutorSession) => ({
+        const response = await fetchInstructors({ page: 1, perPage: 100 });
+        if (cancelled) return;
+
+        const mapped: Tutor[] = response.data
+          .map(adaptInstructor)
+          .filter((tutor): tutor is NonNullable<ReturnType<typeof adaptInstructor>> => tutor !== null)
+          .map((tutor) => ({
             id: tutor.id,
             name: tutor.name,
           }))
-          .filter((t: Tutor) => !!t.name);
+          .filter((tutor) => Boolean(tutor.name));
+
         setTutors(mapped);
       } catch {
-        setTutors([]);
+        if (!cancelled) setTutors([]);
       }
     })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [tutorOptions, open]);
 
   function measureAndSetHeight() {
@@ -125,18 +114,27 @@ export function CreateSessionModal({ open, onClose, onContinue, tutorOptions }: 
   }, [step, title, startAt, endAt, selectedTutor, open]);
   React.useEffect(() => {
     if (!open || step !== 2) return;
+    let cancelled = false;
+
     (async () => {
       try {
-        console.log();
-        const result = await api({
-          url: "tutor-topics?action=",
+        const result = await invokeFunction<unknown>("tutor-topics", {
           method: "GET",
         });
-        setTopicsAvailable(result.data.map((topic: any) => topic.name));
+        if (cancelled) return;
+
+        const topics = extractTopicNames(result);
+        setTopicsAvailable(
+          topics.length > 0 ? topics : Object.values(topicsMap).map((topic) => topic),
+        );
       } catch {
-        // setTopicsAvailable(Object.keys(topicsMap));
+        if (!cancelled) setTopicsAvailable(Object.values(topicsMap));
       }
     })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [open, step]);
   React.useEffect(() => {
     const el = wrapperRef.current;

@@ -86,22 +86,9 @@ export function RoomsControl() {
     setLoading(true);
     setError(null);
     try {
-      let data: unknown = null;
-      try {
-        data = await invokeFunction<unknown>("room-admin");
-      } catch (adminError) {
-        console.warn("Failed to load admin rooms, trying public endpoint", adminError);
-        data = await invokeFunction<unknown>("users-live-chat-rooms");
-      }
+      const data = await invokeFunction<unknown[]>("users-live-chat-rooms?status=all");
 
-      let all: unknown[] = [];
-      if (Array.isArray(data)) all = data as unknown[];
-      else if (data && typeof data === "object") {
-        const d = data as Record<string, unknown>;
-        const a1 = Array.isArray(d["liveRooms"]) ? (d["liveRooms"] as unknown[]) : [];
-        const a2 = Array.isArray(d["soonRooms"]) ? (d["soonRooms"] as unknown[]) : [];
-        all = [...a1, ...a2];
-      }
+      const all = Array.isArray(data) ? data : [];
 
       const adapted = all
         .map((x) => adaptRoom(x as RoomApi))
