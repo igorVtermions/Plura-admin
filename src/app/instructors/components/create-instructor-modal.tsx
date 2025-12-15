@@ -73,6 +73,37 @@ export function CreateInstructorModal({ open, onClose, onContinue, currentStep =
     setFile(f);
   }
 
+  function arrayBufferToBase64(buffer: ArrayBuffer): string {
+    let binary = "";
+    const bytes = new Uint8Array(buffer);
+    const chunkSize = 0x8000;
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+      const chunk = bytes.subarray(i, Math.min(bytes.length, i + chunkSize));
+      binary += String.fromCharCode(...chunk);
+    }
+    return btoa(binary);
+  }
+
+  async function serializeFileToBase64(upload: File) {
+    const buffer = await upload.arrayBuffer();
+    return {
+      base64: arrayBufferToBase64(buffer),
+      fileName: upload.name || `upload-${Date.now()}`,
+      mimeType: upload.type || "application/octet-stream",
+    };
+  }
+
+  async function uploadTutorPhoto(tId: string | number, upload: File) {
+    const encoded = await serializeFileToBase64(upload);
+    await invokeFunction("tutor-photo", {
+      method: "POST",
+      body: {
+        tutorId: String(tId),
+        ...encoded,
+      },
+    });
+  }
+
   function resetForm() {
     setName("");
     setEmail("");
@@ -155,14 +186,8 @@ export function CreateInstructorModal({ open, onClose, onContinue, currentStep =
           body: { tutorId, ...body },
         });
         if (file) {
-          const fd = new FormData();
-          fd.append("photo", file);
-          fd.append("tutorId", String(tutorId));
           try {
-            await invokeFunction("tutor-photo", {
-              method: "POST",
-              body: fd,
-            });
+            await uploadTutorPhoto(tutorId, file);
           } catch (err: unknown) {
             console.error("upload tutor photo error", err);
             toast.error("Instrutor atualizado, mas falha ao enviar foto.");
@@ -203,11 +228,8 @@ export function CreateInstructorModal({ open, onClose, onContinue, currentStep =
         });
         const createdId = created?.id ?? created?.tutorId ?? created?._id ?? null;
         if (file && createdId) {
-          const fd = new FormData();
-          fd.append("photo", file);
-          fd.append("tutorId", String(createdId));
           try {
-            await invokeFunction("tutor-photo", { method: "POST", body: fd });
+            await uploadTutorPhoto(createdId, file);
           } catch (err: unknown) {
             console.error("upload tutor photo error", err);
             toast.error("Instrutor criado, mas falha ao enviar foto.");
