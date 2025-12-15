@@ -1,4 +1,4 @@
-import api, { invokeFunction } from "@/services/api";
+import { invokeFunction } from "@/services/api";
 import type {
   BanUserPayload,
   BanUserResponse,
@@ -21,6 +21,7 @@ const DEFAULT_UNBAN_PAYLOAD: UnbanUserPayload = {
 };
 
 const FOLLOW_DEFAULT_PAGE_SIZE = 20;
+const USER_FUNCTION_NAME = "users-users";
 
 type FollowParams = { page?: number; perPage?: number };
 export type FollowListResult = {
@@ -37,6 +38,34 @@ function normalizeListResponse(payload: unknown): UserListResponse {
     data: Array.isArray(cast.data) ? cast.data : [],
     meta: cast.meta ?? {},
   };
+}
+
+function buildUsersFunctionPath(params: {
+  search?: string;
+  status?: string;
+  page?: number;
+  perPage?: number;
+}): string {
+  const searchParams = new URLSearchParams();
+  const append = (key: string, value?: string | number | null) => {
+    if (value === undefined || value === null) return;
+    if (typeof value === "number") {
+      if (Number.isNaN(value)) return;
+      searchParams.append(key, String(value));
+      return;
+    }
+    const trimmed = value.trim();
+    if (trimmed.length === 0) return;
+    searchParams.append(key, trimmed);
+  };
+
+  append("search", params.search);
+  append("status", params.status);
+  append("page", params.page);
+  append("perPage", params.perPage);
+
+  const query = searchParams.toString();
+  return query ? `${USER_FUNCTION_NAME}?${query}` : USER_FUNCTION_NAME;
 }
 
 function resolveStatus(value: unknown): UserStatus {
@@ -185,10 +214,16 @@ function mapFollowResponse(
   };
 }
 
-export async function fetchUsers(params: UserListParams): Promise<UserListResponse> {
-  const response = await api({
+export async function fetchUsers(params: UserListParams = {}): Promise<UserListResponse> {
+  const functionPath = buildUsersFunctionPath({
+    search: params.search,
+    status: params.status,
+    page: params.page,
+    perPage: params.perPage,
+  });
+
+  const response = await invokeFunction<unknown>(functionPath, {
     method: "GET",
-    url: "users-users",
   });
   return normalizeListResponse(response);
 }

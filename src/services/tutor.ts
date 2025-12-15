@@ -1,5 +1,5 @@
 // src/features/instructors/api.ts
-import api, { invokeFunction } from "@/services/api";
+import { invokeFunction } from "@/services/api";
 import type {
   InstructorCardData,
   InstructorFollower,
@@ -677,6 +677,7 @@ const FOLLOWERS_TOTAL_KEYS = [
 ];
 
 const PAGE_SIZE_KEYS = ["perPage", "pageSize", "limit"];
+const TUTOR_FUNCTION_NAME = "user-tutor-list";
 
 export type UpdateInstructorPayload = {
   name?: string;
@@ -690,32 +691,52 @@ type UpdateInstructorOptions = {
   photoFile?: File | Blob | null;
 };
 
+function buildTutorListFunctionPath(params: {
+  page: number;
+  perPage: number;
+  search?: string;
+  status?: string;
+}): string {
+  const searchParams = new URLSearchParams();
+  searchParams.append("action", "list");
+  searchParams.append("page", String(params.page));
+  searchParams.append("perPage", String(params.perPage));
+  searchParams.append("limit", String(params.perPage));
+
+  if (typeof params.search === "string" && params.search.trim()) {
+    searchParams.append("search", params.search.trim());
+  }
+  if (typeof params.status === "string" && params.status.trim()) {
+    searchParams.append("status", params.status.trim());
+  }
+
+  const query = searchParams.toString();
+  return query ? `${TUTOR_FUNCTION_NAME}?${query}` : TUTOR_FUNCTION_NAME;
+}
+
 export async function fetchInstructors(
   params: InstructorListParams = {},
 ): Promise<InstructorListResponse> {
   const page = params.page ?? 1;
   const perPage = params.perPage ?? 12;
-  const query: Record<string, unknown> = {
+  const functionPath = buildTutorListFunctionPath({
     page,
     perPage,
-    limit: perPage,
     search: params.search,
     status: params.status,
-  };
-  Object.keys(query).forEach((key) => query[key] === undefined && delete query[key]);
-  const response = await api({
-    url: "user-tutor-list?action=list",
-    method: "GET",
-    params: query,
   });
-  return normalizeListResponse(response.data);
+
+  const response = await invokeFunction<unknown>(functionPath, {
+    method: "GET",
+  });
+  return normalizeListResponse(response);
 }
 
 export async function fetchInstructorProfile(id: string): Promise<InstructorProfile | null> {
   if (!id) return null;
-  const response = await invokeFunction<unknown>("tutor", {
+  const functionPath = `tutor?id=${encodeURIComponent(id)}`;
+  const response = await invokeFunction<unknown>(functionPath, {
     method: "GET",
-    body: { tutorId: id },
   });
   return adaptInstructorProfilePayload(response);
 }
