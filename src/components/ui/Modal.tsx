@@ -61,7 +61,7 @@ export default function Modal({
               type="button"
               onClick={onClose}
               aria-label="Fechar"
-              className="p-2 rounded-md hover:bg-gray-100"
+              className="cursor-pointer p-2 rounded-md hover:bg-gray-100"
             >
               <X className="h-5 w-5 text-slate-600" />
             </button>

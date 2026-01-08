@@ -1,19 +1,29 @@
 
-# Supabase
-supabase/.temp/
-supabase/functions/*/index.ts
-!supabase/functions/_shared/
-supabase/functions/_shared/index.ts
-supabase/functions/main/index.ts
+# Supabase (local dev artifacts and functions)
+supabase/
+.supabase/
 
-# Node
+# Dependencies
 node_modules/
 
-# Vite
+# Build / cache
+dist/
 .vite/
+*.tsbuildinfo
 
-# VSCode
+# Coverage
+coverage/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Editor
 .vscode/
+.idea/
 
-# Env
-.env.local
+# Env files
+.env
+.env.*
+!.env.example

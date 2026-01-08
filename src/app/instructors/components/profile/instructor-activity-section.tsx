@@ -105,7 +105,7 @@ export function InstructorActivitySection({ sessions, total, hostName }: Props) 
                     topic={session.title}
                     host={host}
                     liveUsers={[]}
-                    onView={(id) => navigate(`/rooms/${id}`)}
+                    onView={(id) => navigate(`/rooms/history/${id}`)}
                   />
                 );
               }

@@ -11,6 +11,16 @@ export default defineConfig({
       '@': path.resolve(__dirname, 'src'),
     },
   },
+  server: {
+    proxy: {
+      '/supabase': {
+        target: 'https://htmgxlltejrgppquqwbn.supabase.co',
+        changeOrigin: true,
+        secure: true,
+        rewrite: (proxyPath) => proxyPath.replace(/^\/supabase/, ''),
+      },
+    },
+  },
   publicDir: path.resolve(__dirname, 'public'),
   build: {
     outDir: 'dist',

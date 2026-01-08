@@ -1,4 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { User } from "lucide-react";
 import Modal from "@/components/ui/Modal";
 import Image from "@/components/ui/Image";
 import { Button } from "@/components/ui/button";
@@ -35,7 +37,7 @@ type TabState = {
   total: number | null;
 };
 
-const ITEM_PAGE_SIZE = 20;
+const ITEM_PAGE_SIZE = 5;
 
 const TABS: Array<{
   key: TabKey;
@@ -80,6 +82,7 @@ export function FollowersFollowingModal({
   fetchFollowing,
   initialTab = "followers",
 }: Props) {
+  const navigate = useNavigate();
   const [tab, setTab] = useState<TabKey>(initialTab);
   const [dataByTab, setDataByTab] = useState<Record<TabKey, TabState>>({
     followers: makeInitialState(),
@@ -97,16 +100,6 @@ export function FollowersFollowingModal({
     [tab],
   );
 
-  const countLabel = useMemo(() => {
-    if (activeState.items.length === 0) return "";
-    const total = activeState.total;
-    if (typeof total === "number" && total >= activeState.items.length) {
-      const noun = total === 1 ? "registro" : "registros";
-      return `${activeState.items.length} de ${total} ${noun}`;
-    }
-    const noun = activeState.items.length === 1 ? "item" : "itens";
-    return `${activeState.items.length} ${noun}`;
-  }, [activeState.items.length, activeState.total]);
 
   const loadTabData = useCallback(
     async (targetTab: TabKey, pageToLoad: number, reset: boolean) => {
@@ -157,13 +150,13 @@ export function FollowersFollowingModal({
 
         setDataByTab((prev) => {
           const current = prev[targetTab];
-          const mergedItems = reset ? received : [...current.items, ...received];
+          const mergedItems = received;
           const effectiveTotal = incomingTotal !== null ? incomingTotal : current.total;
           const derivedHasMore =
             hasMoreFlag !== undefined
               ? hasMoreFlag
               : effectiveTotal != null
-              ? mergedItems.length < effectiveTotal
+              ? pageToLoad * pageSize < effectiveTotal
               : received.length >= pageSize;
 
           return {
@@ -234,16 +227,9 @@ export function FollowersFollowingModal({
     if (next !== tab) setTab(next);
   };
 
-  const handleLoadMore = () => {
-    if (activeState.loading || !activeState.hasMore) return;
-    const isFirstPage = activeState.items.length === 0;
-    const targetPage = isFirstPage ? 1 : activeState.page + 1;
-    loadTabData(tab, targetPage, isFirstPage);
-  };
-
   const handleRetry = () => {
-    const isFirstPage = activeState.items.length === 0;
-    const targetPage = isFirstPage ? 1 : activeState.page + 1;
+    const isFirstPage = activeState.page === 0;
+    const targetPage = isFirstPage ? 1 : activeState.page;
     loadTabData(tab, targetPage, isFirstPage);
   };
 
@@ -313,7 +299,11 @@ export function FollowersFollowingModal({
           {activeState.items.map((user) => (
             <div
               key={user.id}
-              className="flex items-center justify-between gap-3 rounded-lg border border-[#E2E8F8] bg-white px-3 py-2"
+              className="flex items-center justify-between gap-3 rounded-lg border border-[#E2E8F8] bg-white px-3 py-2 cursor-pointer hover:bg-[#F7F9FF]"
+              onClick={() => {
+                if (user.role === "tutor") navigate(`/instructors/${user.id}`);
+                else navigate(`/users/${user.id}`);
+              }}
             >
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 overflow-hidden rounded-full bg-[#F4F6FF]">
@@ -327,12 +317,19 @@ export function FollowersFollowingModal({
                     />
                   ) : (
                     <div className="flex h-10 w-10 items-center justify-center text-[#9BA3BC]">
-                      👤
+                      <User className="h-5 w-5" aria-hidden />
                     </div>
                   )}
                 </div>
                 <div className="text-left">
-                  <div className="text-sm font-semibold text-[#2B1F58]">{user.name}</div>
+                  <div className="flex items-center gap-2 text-sm font-semibold text-[#2B1F58]">
+                    <span>{user.name}</span>
+                    {user.role === "tutor" && (
+                      <span className="rounded-full bg-[#F4F1FF] px-2 py-0.5 text-[11px] font-medium text-[#6A4BC5]">
+                        Tutor
+                      </span>
+                    )}
+                  </div>
                   <div className="text-xs text-[#5A6480]">
                     {user.codename
                       ? `@${user.codename.replace(/^@/, "")}`
@@ -340,7 +337,6 @@ export function FollowersFollowingModal({
                   </div>
                 </div>
               </div>
-              <span className="text-xs text-[#8A94AB]">ID: {user.id}</span>
             </div>
           ))}
 
@@ -358,12 +354,25 @@ export function FollowersFollowingModal({
           )}
         </div>
 
-        <div className="flex items-center justify-between">
-          <div className="text-xs text-[#8A94AB]">{countLabel}</div>
-          {activeState.hasMore && activeState.items.length > 0 && (
-            <Button onClick={handleLoadMore} size="sm" disabled={activeState.loading}>
-              {activeState.loading ? "Carregando..." : "Carregar mais"}
-            </Button>
+        <div className="flex items-center justify-center">
+          {activeState.items.length >= ITEM_PAGE_SIZE && (
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={() => loadTabData(tab, Math.max(1, activeState.page - 1), false)}
+                size="sm"
+                variant="outline"
+                disabled={activeState.loading || activeState.page <= 1}
+              >
+                Anterior
+              </Button>
+              <Button
+                onClick={() => loadTabData(tab, activeState.page + 1, false)}
+                size="sm"
+                disabled={activeState.loading || !activeState.hasMore}
+              >
+                {activeState.loading ? "Carregando..." : "Próxima página"}
+              </Button>
+            </div>
           )}
         </div>
       </div>

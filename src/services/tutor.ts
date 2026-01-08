@@ -450,7 +450,7 @@ function normalizeInstructorFollowerEntry(raw: unknown): InstructorFollower | nu
   const data = raw as Record<string, unknown>;
   const base = asRecord(data.user) ?? asRecord(data.profile) ?? data;
 
-  const id = pickString(
+  const idString = pickString(
     base?.id,
     base?.userId,
     base?._id,
@@ -460,6 +460,17 @@ function normalizeInstructorFollowerEntry(raw: unknown): InstructorFollower | nu
     data.followerId,
     data.followId,
   );
+  const idNumber = pickNumber(
+    base?.id,
+    base?.userId,
+    base?._id,
+    data.id,
+    data.userId,
+    data._id,
+    data.followerId,
+    data.followId,
+  );
+  const id = idString ?? (typeof idNumber === "number" ? String(idNumber) : null);
   if (!id) return null;
 
   const name =
@@ -667,6 +678,7 @@ function extractNumberByKeys(payload: unknown, keys: string[]): number | null {
 
 const FOLLOWERS_TOTAL_KEYS = [
   "followersCount",
+  "followers",
   "followers_total",
   "followersTotal",
   "totalFollowers",
@@ -678,6 +690,7 @@ const FOLLOWERS_TOTAL_KEYS = [
 
 const PAGE_SIZE_KEYS = ["perPage", "pageSize", "limit"];
 const TUTOR_FUNCTION_NAME = "user-tutor-list";
+const TUTOR_FOLLOW_STATS_FUNCTION = "users-tutors-follow-stats";
 
 export type UpdateInstructorPayload = {
   name?: string;
@@ -775,10 +788,15 @@ export async function fetchInstructorFollowers(
 ): Promise<InstructorFollowersResult> {
   const page = params.page ?? 1;
   const perPage = params.perPage ?? DEFAULT_FOLLOWERS_PAGE_SIZE;
-  const query: Record<string, unknown> = { page, perPage, limit: perPage };
-  const payload = await invokeFunction<unknown>("tutor-follow", {
+  const search = new URLSearchParams({
+    action: "get-followers",
+    tutorId,
+    page: String(page),
+    perPage: String(perPage),
+    limit: String(perPage),
+  });
+  const payload = await invokeFunction<unknown>(`user-tutor-follow?${search.toString()}`, {
     method: "GET",
-    body: { tutorId, ...query },
   });
   const items = collectFollowersArray(payload)
     .map(normalizeInstructorFollowerEntry)
@@ -796,6 +814,46 @@ export async function fetchInstructorFollowers(
     pageSize,
     hasMore,
   };
+}
+
+export async function fetchTutorRoomHistory(params?: {
+  tutorId?: string;
+  page?: number;
+  limit?: number;
+}): Promise<unknown[]> {
+  const page = params?.page ?? 1;
+  const limit = params?.limit ?? 12;
+  const query = new URLSearchParams({ page: String(page), limit: String(limit) });
+  if (params?.tutorId) {
+    query.set("tutorId", params.tutorId);
+  }
+  const functionPath = params?.tutorId
+    ? `admin-tutor-room-history?${query.toString()}`
+    : `tutor-room-history/rooms/history?${query.toString()}`;
+  const response = await invokeFunction<unknown>(functionPath, { method: "GET" });
+  if (response && typeof response === "object") {
+    const record = response as Record<string, unknown>;
+    if (Array.isArray(record.rooms)) return record.rooms;
+  }
+  return [];
+}
+
+export async function fetchTutorFollowStats(tutorId: string): Promise<number | null> {
+  if (!tutorId) return null;
+  const pathResponse = await invokeFunction<unknown>(
+    `${TUTOR_FOLLOW_STATS_FUNCTION}/${encodeURIComponent(tutorId)}/follow-stats`,
+    { method: "GET" },
+  );
+  let total = extractNumberByKeys(pathResponse, FOLLOWERS_TOTAL_KEYS);
+  if (typeof total === "number") return total;
+
+  const query = new URLSearchParams({ tutorId });
+  const queryResponse = await invokeFunction<unknown>(
+    `${TUTOR_FOLLOW_STATS_FUNCTION}?${query.toString()}`,
+    { method: "GET" },
+  );
+  total = extractNumberByKeys(queryResponse, FOLLOWERS_TOTAL_KEYS);
+  return typeof total === "number" ? total : null;
 }
 
 export async function updateInstructor(

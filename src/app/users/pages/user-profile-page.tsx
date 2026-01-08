@@ -14,15 +14,19 @@ import { UserDetailsModal } from "../components/profile/user-details-modal";
 import { FollowersFollowingModal } from "../components/profile/followers-following-modal";
 import { UserReportsModal } from "../components/profile/user-reports-modal";
 import { STATUS_META } from "../utils/visuals";
-import type { BanReasonKey, UserProfile } from "@/types/users";
+import type { BanReasonKey, UserProfile, UserProfileReport } from "@/types/users";
 import {
   banUser,
   fetchFollowers as apiFetchFollowers,
   fetchFollowing as apiFetchFollowing,
+  fetchUserBanStatus,
+  fetchFollowStats,
+  fetchTutorFollowing,
   fetchUserProfile,
+  fetchUserReports,
+  fetchUserSessionsAdmin,
   unbanUser,
 } from "@/services/users";
-import { fetchUserSessionsAdmin } from "@/services/users";
 
 function extractErrorMessage(err: unknown, fallback: string) {
   if (typeof err === "string") return err;
@@ -40,24 +44,30 @@ function extractErrorMessage(err: unknown, fallback: string) {
 }
 
 type ConfirmAction = "ban" | "unban" | null;
-const FOLLOW_PAGE_SIZE = 20;
+const FOLLOW_PAGE_SIZE = 5;
 
 function normalizeProfile(payload: unknown): UserProfile | null {
   if (!payload || typeof payload !== "object") return null;
   const data = payload as Record<string, unknown>;
-  const user = (data.user ?? data.data) as Record<string, unknown> | undefined;
+  const user = (data.user ?? data.data ?? data) as Record<string, unknown> | undefined;
   if (!user || typeof user !== "object") return null;
 
   const idValue = user.id ?? user.userId ?? user["_id"];
   const id = typeof idValue === "string" || typeof idValue === "number" ? String(idValue) : null;
   if (!id) return null;
 
-  const nameValue = user.name ?? user.fullName ?? user.displayName;
+  const nameValue = user.name ?? user.nome ?? user.fullName ?? user.displayName;
   const name =
     typeof nameValue === "string" && nameValue.trim().length > 0 ? nameValue : "Usuário sem nome";
 
-  const statusRaw = typeof user.status === "string" ? user.status.toLowerCase() : "";
-  const status = statusRaw === "active" ? "active" : statusRaw === "banned" ? "banned" : "pending";
+  const statusRaw =
+    typeof user.status === "string"
+      ? user.status.toLowerCase()
+      : typeof user.accountStatus === "string"
+      ? user.accountStatus.toLowerCase()
+      : "";
+  const status =
+    statusRaw === "active" ? "active" : statusRaw === "banned" ? "banned" : "active";
 
   const bio =
     typeof user.bio === "string"
@@ -235,7 +245,12 @@ function normalizeProfile(payload: unknown): UserProfile | null {
         ? user.codename
         : null,
     email: typeof user.email === "string" ? user.email : null,
-    phone: typeof user.phone === "string" ? user.phone : null,
+    phone:
+      typeof user.phone === "string"
+        ? user.phone
+        : typeof user.telefone === "string"
+        ? user.telefone
+        : null,
     bio,
     avatarUrl: avatar,
     isVerified: typeof user.isVerified === "boolean" ? user.isVerified : false,
@@ -259,6 +274,10 @@ export function UserProfilePage() {
   const [pendingAction, setPendingAction] = useState(false);
   const [viewDataOpen, setViewDataOpen] = useState(false);
   const [reportsModalOpen, setReportsModalOpen] = useState(false);
+  const [reportsLoading, setReportsLoading] = useState(false);
+  const [reportsError, setReportsError] = useState<string | null>(null);
+  const [reportsData, setReportsData] = useState<UserProfileReport[] | null>(null);
+  const [reportsTotal, setReportsTotal] = useState<number | null>(null);
   const [finishedSessions, setFinishedSessions] = useState<Array<Record<string, unknown>> | null>(
     null,
   );
@@ -282,7 +301,40 @@ export function UserProfilePage() {
           setProfile(null);
           return;
         }
-        setProfile(normalized);
+        let updatedProfile = normalized;
+        try {
+          const stats = await fetchFollowStats(userId ?? "");
+          updatedProfile = {
+            ...normalized,
+            followersCount: stats.followers ?? normalized.followersCount,
+            followingCount: stats.following ?? normalized.followingCount,
+          };
+        } catch (err) {
+          console.debug("fetchFollowStats error", err);
+        }
+
+        try {
+          const banStatus = await fetchUserBanStatus(userId ?? "");
+          if (banStatus) {
+            updatedProfile = { ...updatedProfile, status: banStatus };
+          }
+        } catch (err) {
+          console.debug("fetchUserBanStatus error", err);
+        }
+
+        try {
+          const reportsResponse = await fetchUserReports(userId ?? "");
+          const items = Array.isArray(reportsResponse?.items) ? reportsResponse.items : [];
+          const total = typeof reportsResponse?.total === "number" ? reportsResponse.total : items.length;
+          if (!cancelled) {
+            setReportsData(items as UserProfileReport[]);
+            setReportsTotal(total);
+            updatedProfile = { ...updatedProfile, reportsTotal: total, reports: items as UserProfileReport[] };
+          }
+        } catch (err) {
+          console.debug("fetchUserReports error", err);
+        }
+        setProfile(updatedProfile);
         // try to fetch finished sessions (admin endpoint)
         try {
           const sessionsResp = await fetchUserSessionsAdmin(userId ?? "");
@@ -315,6 +367,10 @@ export function UserProfilePage() {
     setViewDataOpen(false);
     setFollowModalOpen(false);
     setReportsModalOpen(false);
+    setReportsData(null);
+    setReportsTotal(null);
+    setReportsLoading(false);
+    setReportsError(null);
   }, [userId]);
 
   const meta = useMemo(() => {
@@ -369,8 +425,28 @@ export function UserProfilePage() {
     setFollowModalTab("following");
     setFollowModalOpen(true);
   };
+  const loadReports = async (uid: string) => {
+    setReportsLoading(true);
+    setReportsError(null);
+    try {
+      const response = await fetchUserReports(uid);
+      const items = Array.isArray(response?.items) ? response.items : [];
+      const total = typeof response?.total === "number" ? response.total : items.length;
+      setReportsData(items as UserProfileReport[]);
+      setReportsTotal(total);
+      setProfile((prev) => (prev ? { ...prev, reportsTotal: total } : prev));
+    } catch (err) {
+      console.error("fetchUserReports error", err);
+      setReportsError("N\u00e3o foi poss\u00edvel carregar as den\u00fancias.");
+    } finally {
+      setReportsLoading(false);
+    }
+  };
+
   const openReports = () => {
     setReportsModalOpen(true);
+    if (!profile?.id) return;
+    loadReports(profile.id);
   };
 
   const fetchFollowers = async (uid: string, page = 1) => {
@@ -379,8 +455,19 @@ export function UserProfilePage() {
   };
 
   const fetchFollowing = async (uid: string, page = 1) => {
-    const result = await apiFetchFollowing(uid, { page, perPage: FOLLOW_PAGE_SIZE });
-    return { ...result, total: result.total ?? undefined };
+    const [usersResult, tutorsResult] = await Promise.all([
+      apiFetchFollowing(uid, { page, perPage: FOLLOW_PAGE_SIZE }),
+      fetchTutorFollowing(uid, { page, perPage: FOLLOW_PAGE_SIZE }),
+    ]);
+    const mergedItems = [...usersResult.items, ...tutorsResult.items];
+    const total = (usersResult.total ?? 0) + (tutorsResult.total ?? 0);
+    const hasMore = usersResult.hasMore || tutorsResult.hasMore;
+    return {
+      items: mergedItems,
+      total: Number.isFinite(total) ? total : undefined,
+      pageSize: Math.max(usersResult.pageSize, tutorsResult.pageSize),
+      hasMore,
+    };
   };
 
   if (loading) {
@@ -487,8 +574,10 @@ export function UserProfilePage() {
       <UserReportsModal
         open={reportsModalOpen}
         onClose={() => setReportsModalOpen(false)}
-        reports={profile.reports}
-        total={profile.reportsTotal}
+        reports={reportsData ?? profile.reports}
+        total={reportsTotal ?? profile.reportsTotal}
+        loading={reportsLoading}
+        error={reportsError}
       />
     </main>
   );

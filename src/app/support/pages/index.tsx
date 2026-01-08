@@ -2,27 +2,246 @@
 
 import Image from "@/components/ui/Image";
 import Link from "@/router/Link";
+import { useNavigate } from "react-router-dom";
+import {
+  fetchSupportRooms,
+  fetchSupportTickets,
+  deleteSupportRoom,
+  deleteSupportTicket,
+  updateSupportRoomStatus,
+  updateSupportTicketStatus,
+  connectSupportChat,
+  type SupportRoom,
+  type SupportTicket,
+  type SupportTicketsTotals,
+} from "@/services/support";
 import React from "react";
+import Modal from "@/components/ui/Modal";
 
 export const metadata = { title: "Suporte | Plura Talks - Administrador" };
 
 export function SupportPage() {
-  const denuncias = 0;
-  const chamados = 0;
-  const chats = Array.from({ length: 14 }).map((_, i) => ({
-    id: String(i + 1),
-    title: `Sala de suporte #${i + 1}`,
-    userName: `Usuário ${i + 1}`,
-    nickname: `codinome_${i + 1}`,
-    photoUrl: "",
-  }));
+  const navigate = useNavigate();
+  const [ticketItems, setTicketItems] = React.useState<SupportTicket[]>([]);
+  const [ticketTotals, setTicketTotals] = React.useState<SupportTicketsTotals | null>(null);
+  const [ticketsLoading, setTicketsLoading] = React.useState(true);
+  const [ticketsError, setTicketsError] = React.useState<string | null>(null);
+  const [rooms, setRooms] = React.useState<SupportRoom[]>([]);
+  const [roomsLoading, setRoomsLoading] = React.useState(true);
+  const [roomsError, setRoomsError] = React.useState<string | null>(null);
+  const [showTicketsOnly, setShowTicketsOnly] = React.useState(false);
+  const [ticketSearch, setTicketSearch] = React.useState("");
+  const [ticketStatusFilter, setTicketStatusFilter] = React.useState<"all" | "completed" | "in_progress">("all");
+  const [ticketSort, setTicketSort] = React.useState<"newest" | "oldest">("newest");
+  const [menuOpenId, setMenuOpenId] = React.useState<string | null>(null);
+  const [actionLoading, setActionLoading] = React.useState(false);
+  const [pendingAction, setPendingAction] = React.useState<{
+    id: string;
+    type: "chat" | "ticket";
+    title: string;
+    status: string;
+    ticketType?: SupportTicket["type"];
+    action: "delete" | "complete" | "reopen";
+  } | null>(null);
+  const [selectedChat, setSelectedChat] = React.useState<SupportRoom | null>(null);
+  const [chatModalOpen, setChatModalOpen] = React.useState(false);
+  const [chatActionLoading, setChatActionLoading] = React.useState(false);
   const [page, setPage] = React.useState(1);
   const perPage = 9;
-  const totalPages = Math.max(1, Math.ceil(chats.length / perPage));
-  const paged = chats.slice((page - 1) * perPage, page * perPage);
+  const roomCards = React.useMemo(() => {
+    const roomCards = rooms.map((room) => ({
+      type: "chat" as const,
+      id: room.id,
+      title: room.title,
+      userName: room.userName,
+      nickname: room.nickname,
+      photoUrl: room.photoUrl,
+      isTutor: room.isTutor,
+      status: room.status,
+      priority: room.priority,
+      reason: room.reason,
+      description: room.description,
+      requesterRole: room.requesterRole,
+      requesterName: room.requesterName,
+      assignedAdminName: room.assignedAdminName,
+    }));
+    return roomCards;
+  }, [rooms]);
+
+  const allTicketCards = React.useMemo(
+    () =>
+      ticketItems.map((ticket) => ({
+        type: "ticket" as const,
+        id: ticket.id,
+        title: formatTicketTitle(ticket) || `Ticket #${ticket.id}`,
+        userName: ticket.reporterName || ticket.tutorName || "Usuário",
+        nickname: ticket.reportedCodinome || null,
+        photoUrl: null,
+        isTutor: ticket.type === "tutor_user_report" || ticket.type === "tutor_problem_report",
+        status: ticket.status,
+        ticketType: ticket.type,
+        createdAt: ticket.createdAt,
+      })),
+    [ticketItems],
+  );
+
+  const filteredTickets = React.useMemo(() => {
+    let items = [...ticketItems];
+    if (ticketStatusFilter !== "all") {
+      items = items.filter((ticket) => ticket.status === ticketStatusFilter);
+    }
+    const query = ticketSearch.trim().toLowerCase();
+    if (query.length > 0) {
+      items = items.filter((ticket) => {
+        const haystack = [
+          ticket.id,
+          ticket.reason,
+          ticket.problemType,
+          ticket.description,
+          ticket.reporterName,
+          ticket.reportedName,
+          ticket.reportedCodinome,
+          ticket.tutorName,
+        ]
+          .filter((value) => typeof value === "string" && value.length > 0)
+          .map((value) => value.toLowerCase());
+        return haystack.some((value) => value.includes(query));
+      });
+    }
+    items.sort((a, b) => {
+      const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return ticketSort === "newest" ? bTime - aTime : aTime - bTime;
+    });
+    return items;
+  }, [ticketItems, ticketSearch, ticketSort, ticketStatusFilter]);
+
+  const filteredTicketCards = React.useMemo(
+    () =>
+      filteredTickets.map((ticket) => ({
+        type: "ticket" as const,
+        id: ticket.id,
+        title: formatTicketTitle(ticket) || `Ticket #${ticket.id}`,
+        userName: ticket.reporterName || ticket.tutorName || "Usuário",
+        nickname: ticket.reportedCodinome || null,
+        photoUrl: null,
+        isTutor: ticket.type === "tutor_user_report" || ticket.type === "tutor_problem_report",
+        status: ticket.status,
+        ticketType: ticket.type,
+        createdAt: ticket.createdAt,
+      })),
+    [filteredTickets],
+  );
+
+  const cards = React.useMemo(() => {
+    if (showTicketsOnly) return filteredTicketCards;
+    return [...roomCards, ...allTicketCards];
+  }, [showTicketsOnly, roomCards, allTicketCards, filteredTicketCards]);
+  const totalPages = Math.max(1, Math.ceil(cards.length / perPage));
+  const paged = cards.slice((page - 1) * perPage, page * perPage);
   const pagesContainerRef = React.useRef<HTMLDivElement | null>(null);
   const selectedBtnRef = React.useRef<HTMLButtonElement | null>(null);
+  const menuRef = React.useRef<HTMLDivElement | null>(null);
   const [pageAnimating, setPageAnimating] = React.useState(false);
+  const ticketsTotal = ticketTotals?.all ?? ticketItems.length;
+
+  function formatTicketTitle(ticket: SupportTicket) {
+    if (ticket.type === "problem_report") {
+      return ticket.problemType ? `Problema técnico: ${ticket.problemType}` : "Problema técnico";
+    }
+    if (ticket.type === "tutor_problem_report") {
+      return ticket.problemType
+        ? `Problema técnico tutor: ${ticket.problemType}`
+        : "Problema técnico tutor";
+    }
+    if (ticket.type === "tutor_user_report") {
+      return ticket.reason ? `Denúncia tutor: ${ticket.reason}` : "Denúncia tutor";
+    }
+    return ticket.reason ? `Denúncia usuário: ${ticket.reason}` : "Denúncia usuário";
+  }
+
+  function getPriorityMeta(priority: string | null | undefined) {
+    const value = String(priority || "").toLowerCase();
+    if (value.includes("high") || value.includes("urgent") || value.includes("crise")) {
+      return { label: "prioridade alta", color: "#C53030", bg: "#FFF5F5", border: "#FECACA" };
+    }
+    if (value.includes("medium") || value.includes("help") || value.includes("ajuda")) {
+      return { label: "prioridade média", color: "#B45309", bg: "#FFFBEB", border: "#FCD34D" };
+    }
+    return { label: "prioridade baixa", color: "#6B7280", bg: "#F3F4F6", border: "#E5E7EB" };
+  }
+
+
+  React.useEffect(() => {
+    let active = true;
+    async function loadTickets() {
+      const startTime = Date.now();
+      try {
+        setTicketsLoading(true);
+        setTicketsError(null);
+        const response = await fetchSupportTickets({ page: 1, perPage: 6, withCounts: true });
+        if (!active) return;
+        setTicketItems(response.items);
+        setTicketTotals(response.totals ?? null);
+      } catch (err) {
+        if (!active) return;
+        setTicketsError("Erro ao carregar tickets");
+      } finally {
+        if (!active) return;
+        const elapsed = Date.now() - startTime;
+        const minDelay = 500;
+        const remaining = Math.max(0, minDelay - elapsed);
+        setTimeout(() => {
+          if (active) setTicketsLoading(false);
+        }, remaining);
+      }
+    }
+    loadTickets();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  React.useEffect(() => {
+    let active = true;
+    async function loadRooms() {
+      const startTime = Date.now();
+      try {
+        setRoomsLoading(true);
+        setRoomsError(null);
+        const response = await fetchSupportRooms({ page: 1, perPage: 50 });
+        if (!active) return;
+        setRooms(response.items);
+      } catch (err) {
+        if (!active) return;
+        setRoomsError("Erro ao carregar salas de suporte");
+      } finally {
+        if (!active) return;
+        const elapsed = Date.now() - startTime;
+        const minDelay = 500;
+        const remaining = Math.max(0, minDelay - elapsed);
+        setTimeout(() => {
+          if (active) setRoomsLoading(false);
+        }, remaining);
+      }
+    }
+    loadRooms();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  React.useEffect(() => {
+    if (!menuOpenId) return;
+    const handleClick = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setMenuOpenId(null);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [menuOpenId]);
+
   function goPage(p: number) {
     const next = Math.max(1, Math.min(totalPages, p));
     setPage(next);
@@ -42,6 +261,105 @@ export function SupportPage() {
     return () => clearTimeout(t);
   }, [page]);
 
+  const confirmTitle = pendingAction
+    ? pendingAction.action === "delete"
+      ? "Apagar item"
+      : pendingAction.action === "complete"
+      ? "Concluir item"
+      : "Voltar para em andamento"
+    : "";
+  const confirmSubtitle = pendingAction
+    ? pendingAction.action === "delete"
+      ? `Tem certeza que deseja apagar "${pendingAction.title}"?`
+      : pendingAction.action === "complete"
+      ? `Tem certeza que deseja concluir "${pendingAction.title}"?`
+      : `Tem certeza que deseja reabrir "${pendingAction.title}"?`
+    : "";
+  const confirmDescription = pendingAction
+    ? pendingAction.action === "delete"
+      ? "Essa acao nao pode ser desfeita."
+      : pendingAction.action === "complete"
+      ? "Essa acao marcara o item como concluido."
+      : "Essa acao marcara o item como em andamento."
+    : "";
+
+  async function handleConnectChat() {
+    if (!selectedChat || chatActionLoading) return;
+    setChatActionLoading(true);
+    try {
+      const result = await connectSupportChat({ id: selectedChat.id });
+      const payload = result && typeof result === "object" ? result : {};
+      const assignedAdminName =
+        typeof payload.assignedAdminName === "string" ? payload.assignedAdminName : null;
+      const connectedAt =
+        typeof payload.connectedAt === "string" ? payload.connectedAt : new Date().toISOString();
+      const status = typeof payload.status === "string" ? payload.status : "connected";
+      setRooms((items) =>
+        items.map((item) =>
+          item.id === selectedChat.id
+            ? {
+                ...item,
+                status,
+                assignedAdminName: assignedAdminName ?? item.assignedAdminName,
+                connectedAt,
+              }
+            : item,
+        ),
+      );
+      setChatModalOpen(false);
+      navigate(`/support/chat/${selectedChat.id}`);
+    } finally {
+      setChatActionLoading(false);
+    }
+  }
+
+  async function handleConfirmAction() {
+    if (!pendingAction || actionLoading) return;
+    setActionLoading(true);
+    try {
+      if (pendingAction.type === "ticket") {
+        if (pendingAction.action === "delete") {
+          await deleteSupportTicket({ id: pendingAction.id, type: pendingAction.ticketType! });
+          setTicketItems((items) =>
+            items.filter(
+              (item) =>
+                item.id !== pendingAction.id || item.type !== pendingAction.ticketType,
+            ),
+          );
+        } else {
+          const status = pendingAction.action === "complete" ? "completed" : "in_progress";
+          await updateSupportTicketStatus({
+            id: pendingAction.id,
+            type: pendingAction.ticketType!,
+            status,
+          });
+          setTicketItems((items) =>
+            items.map((item) =>
+              item.id === pendingAction.id && item.type === pendingAction.ticketType
+                ? { ...item, status }
+                : item,
+            ),
+          );
+        }
+      } else {
+        if (pendingAction.action === "delete") {
+          await deleteSupportRoom({ id: pendingAction.id });
+          setRooms((items) => items.filter((item) => item.id !== pendingAction.id));
+        } else {
+          const status = pendingAction.action === "complete" ? "completed" : "in_progress";
+          await updateSupportRoomStatus({ id: pendingAction.id, status });
+          setRooms((items) =>
+            items.map((item) => (item.id === pendingAction.id ? { ...item, status } : item)),
+          );
+        }
+      }
+    } finally {
+      setActionLoading(false);
+      setPendingAction(null);
+    }
+  }
+
+
   return (
     <main className="p-8 flex-1 overflow-auto md:overflow-auto min-h-0 bg-white">
       <div className="max-w-5xl mx-auto w-full min-h-0">
@@ -52,123 +370,432 @@ export function SupportPage() {
         <section className="p-1 rounded-lg">
           <h2 className="font-medium text-[20px] mb-4">Ações rápidas</h2>
           <div className="flex flex-col sm:flex-row gap-3">
-            <button
-              type="button"
-              className="rounded-md flex flex-col justify-center items-start gap-3 p-5 w-full flex-1 min-w-0 bg-[#F7F9FF] cursor-pointer transition-transform duration-150 ease-in-out hover:-translate-y-1 hover:scale-[1.02] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-[#977CEC]"
-              style={{ border: "1px solid #D0D9F1" }}
-            >
-              <div
-                aria-hidden
-                style={{
-                  width: 32,
-                  height: 32,
-                  WebkitMask: "url(/Megaphone.svg) center / contain no-repeat",
-                  mask: "url(/Megaphone.svg) center / contain no-repeat",
-                  background: "#808DB2",
-                }}
-              />
-              <span className="text-[16px] font-medium text-[#191F33]">Denúncia</span>
-              <span className="text-sm text-[#191F33]">
-                {denuncias > 0
-                  ? `${denuncias} Denúncia${denuncias > 1 ? "s" : ""}`
-                  : "Nenhuma Denúncia"}
-              </span>
-            </button>
+            {ticketsLoading || roomsLoading ? (
+              <>
+                <div
+                  className="rounded-md flex flex-col justify-center items-start gap-3 p-5 w-full flex-1 min-w-0 bg-[#F7F9FF] animate-pulse"
+                  style={{ border: "1px solid #D0D9F1" }}
+                >
+                  <div className="h-8 w-8 rounded-full bg-[#E2E8F8]" />
+                  <div className="h-4 w-20 rounded bg-[#E2E8F8]" />
+                  <div className="h-4 w-28 rounded bg-[#E2E8F8]" />
+                </div>
+                <div
+                  className="rounded-md flex flex-col justify-center items-start gap-3 p-5 w-full flex-1 min-w-0 bg-[#F7F9FF] animate-pulse"
+                  style={{ border: "1px solid #D0D9F1" }}
+                >
+                  <div className="h-8 w-8 rounded-full bg-[#E2E8F8]" />
+                  <div className="h-4 w-24 rounded bg-[#E2E8F8]" />
+                  <div className="h-4 w-28 rounded bg-[#E2E8F8]" />
+                </div>
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowTicketsOnly((current) => {
+                      const next = !current;
+                      setPage(1);
+                      return next;
+                    });
+                  }}
+                  className="rounded-md flex flex-col justify-center items-start gap-3 p-5 w-full flex-1 min-w-0 bg-[#F7F9FF] cursor-pointer transition-transform duration-150 ease-in-out hover:-translate-y-1 hover:scale-[1.02] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-[#977CEC]"
+                  style={{ border: "1px solid #D0D9F1" }}
+                >
+                  <div
+                    aria-hidden
+                    style={{
+                      width: 32,
+                      height: 32,
+                      WebkitMask: "url(/Megaphone.svg) center / contain no-repeat",
+                      mask: "url(/Megaphone.svg) center / contain no-repeat",
+                      background: "#808DB2",
+                    }}
+                  />
+                  <span className="text-[16px] font-medium text-[#191F33]">Ticket</span>
+                  <span className="text-sm text-[#191F33]">
+                    {ticketsTotal > 0
+                      ? `${ticketsTotal} ticket${ticketsTotal > 1 ? "s" : ""}`
+                      : "Nenhum ticket"}
+                  </span>
+                </button>
 
-            <button
-              type="button"
-              className="rounded-md flex flex-col justify-center items-start gap-3 p-5 w-full flex-1 min-w-0 bg-[#F7F9FF] cursor-pointer transition-transform duration-150 ease-in-out hover:-translate-y-1 hover:scale-[1.02] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-[#977CEC]"
-              style={{ border: "1px solid #D0D9F1" }}
-            >
-              <Image src="/Hand.svg" alt="Problemas Técnicos" width={32} height={32} />
-              <span className="text-[16px] font-medium text-[#191F33]">Problemas Técnicos</span>
-              <span className="text-sm text-[#191F33]">
-                {chamados > 0 ? `${chamados} chamado${chamados > 1 ? "s" : ""}` : "Nenhum chamado"}
-              </span>
-            </button>
+                <button
+                  type="button"
+                  onClick={() => setShowTicketsOnly(false)}
+                  className="rounded-md flex flex-col justify-center items-start gap-3 p-5 w-full flex-1 min-w-0 bg-[#F7F9FF] cursor-pointer transition-transform duration-150 ease-in-out hover:-translate-y-1 hover:scale-[1.02] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-[#977CEC]"
+                  style={{ border: "1px solid #D0D9F1" }}
+                >
+                  <Image src="/Hand.svg" alt="Bate papo" width={32} height={32} />
+                  <span className="text-[16px] font-medium text-[#191F33]">Bate papo</span>
+                  <span className="text-sm text-[#191F33]">
+                    {rooms.length > 0
+                      ? `${rooms.length} chat${rooms.length > 1 ? "s" : ""}`
+                      : "Nenhum chat"}
+                  </span>
+                </button>
+              </>
+            )}
           </div>
         </section>
 
         <section className="p-1 rounded-lg mt-6 pb-0 md:pb-0">
-          <h2 className="font-medium text-[20px] mb-4">Chat de Suporte</h2>
-          <div
-            className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 ${
-              pageAnimating ? "page-transition" : ""
-            }`}
-          >
-            {paged.map((c) => (
-              <article
-                key={c.id}
-                className="rounded-2xl flex transition-transform duration-150 ease-in-out hover:-translate-y-1 hover:scale-[1.02] hover:shadow-md"
-                style={{
-                  height: 174,
-                  padding: 16,
-                  flexDirection: "column",
-                  alignItems: "flex-start",
-                  gap: 16,
-                  background: "#F3F0FF",
-                  border: "1px solid #D4C7FF",
-                }}
-              >
-                <header className="w-full flex items-start justify-between">
-                  <h3 className="text-[16px] font-medium" style={{ color: "#361A6D" }}>
-                    {c.title}
-                  </h3>
-                  <div className="flex items-center gap-3">
-                    <Image src="/MinusCircle.svg" alt="Minimizar" width={20} height={20} />
-                    <Image src="/DotsThreeVertical.svg" alt="Mais opções" width={20} height={20} />
+          <h2 className="font-medium text-[20px] mb-4">Ação rápida</h2>
+          {showTicketsOnly ? (
+            <div className="mb-4 rounded-xl border border-[#E2E8F8] bg-white p-4">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div className="flex-1">
+                  <label className="text-xs" style={{ color: "#5A6480" }}>
+                    Buscar ticket
+                  </label>
+                  <input
+                    value={ticketSearch}
+                    onChange={(event) => {
+                      setTicketSearch(event.target.value);
+                      setPage(1);
+                    }}
+                    placeholder="Buscar por título, usuário ou motivo"
+                    className="mt-2 w-full rounded-lg border px-3 py-2 text-sm"
+                    style={{ borderColor: "#D0D9F1", background: "#F8FAFF", color: "#191F33" }}
+                  />
+                </div>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="min-w-[160px]">
+                    <label className="text-xs" style={{ color: "#5A6480" }}>
+                      Status
+                    </label>
+                    <select
+                      value={ticketStatusFilter}
+                      onChange={(event) => {
+                        setTicketStatusFilter(
+                          event.target.value as "all" | "completed" | "in_progress",
+                        );
+                        setPage(1);
+                      }}
+                      className="mt-2 w-full rounded-lg border px-3 py-2 text-sm"
+                      style={{ borderColor: "#D0D9F1", background: "#F8FAFF", color: "#191F33" }}
+                    >
+                      <option value="all">Todos</option>
+                      <option value="in_progress">Em andamento</option>
+                      <option value="completed">Concluído</option>
+                    </select>
                   </div>
-                </header>
-
-                <div className="flex items-center gap-3 w-full">
-                  {c.photoUrl ? (
-                    <img
-                      src={c.photoUrl}
-                      alt={c.userName}
-                      width={40}
-                      height={40}
-                      style={{ borderRadius: 8, objectFit: "cover" }}
-                    />
-                  ) : (
-                    <Image
-                      src="/User.svg"
-                      alt="Avatar"
-                      width={40}
-                      height={40}
-                      style={{ borderRadius: 8 }}
-                    />
-                  )}
-                  <div className="flex flex-col min-w-0">
-                    <span style={{ color: "#361A6D", fontSize: 14, fontWeight: 500 }}>
-                      {c.userName}
-                    </span>
-                    <span style={{ color: "#6B4DB8", fontSize: 14, fontWeight: 400 }}>
-                      {c.nickname}
-                    </span>
+                  <div className="min-w-[180px]">
+                    <label className="text-xs" style={{ color: "#5A6480" }}>
+                      Ordenar por data
+                    </label>
+                    <select
+                      value={ticketSort}
+                      onChange={(event) => {
+                        setTicketSort(event.target.value as "newest" | "oldest");
+                        setPage(1);
+                      }}
+                      className="mt-2 w-full rounded-lg border px-3 py-2 text-sm"
+                      style={{ borderColor: "#D0D9F1", background: "#F8FAFF", color: "#191F33" }}
+                    >
+                      <option value="newest">Mais recente</option>
+                      <option value="oldest">Mais antigo</option>
+                    </select>
                   </div>
                 </div>
-
-                <Link
-                  href={`/support/chat/${c.id}`}
-                  className="mt-auto w-full flex items-center justify-center gap-2 rounded-md cursor-pointer"
+              </div>
+            </div>
+          ) : null}
+          {(showTicketsOnly ? ticketsLoading : roomsLoading && ticketsLoading) && paged.length === 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              {Array.from({ length: 6 }).map((_, idx) => (
+                <div
+                  key={`card-skeleton-${idx}`}
+                  className="h-[174px] rounded-2xl border border-[#D4C7FF] bg-[#F3F0FF] animate-pulse"
+                />
+              ))}
+            </div>
+          ) : (!showTicketsOnly && roomsError && ticketsError && paged.length === 0) ||
+            (showTicketsOnly && ticketsError && paged.length === 0) ? (
+            <div className="text-sm" style={{ color: "#5A6480" }}>
+              {ticketsError || roomsError}
+            </div>
+          ) : paged.length === 0 ? (
+            <div className="text-sm" style={{ color: "#5A6480" }}>
+              Nenhum item encontrado
+            </div>
+          ) : (
+            <div
+              className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 ${
+                pageAnimating ? "page-transition" : ""
+              }`}
+            >
+              {paged.map((c) => {
+                const menuKey =
+                  c.type === "ticket" ? `ticket-${c.ticketType}-${c.id}` : `chat-${c.id}`;
+                const isCompleted = c.status === "completed";
+                return (
+                <article
+                  key={menuKey}
+                  className="rounded-2xl flex transition-transform duration-150 ease-in-out hover:-translate-y-1 hover:scale-[1.02] hover:shadow-md"
                   style={{
-                    padding: "10px 12px",
-                    background: "#977CEC",
-                    color: "#FCFDFF",
-                    fontSize: 14,
-                    fontWeight: 500,
+                    height: 200,
+                    padding: 16,
+                    flexDirection: "column",
+                    alignItems: "flex-start",
+                    gap: 16,
+                    background: isCompleted ? "#E6F7ED" : "#F3F0FF",
+                    border: isCompleted ? "1px solid #A7E3C5" : "1px solid #D4C7FF",
                   }}
                 >
-                  <Image src="/Chat.svg" alt="Acessar chat" width={18} height={18} />
-                  Acessar Chat
-                </Link>
-              </article>
-            ))}
-          </div>
+                  <header className="w-full flex items-start justify-between">
+                    <div className="flex flex-col gap-2">
+                      <h3
+                        className="text-[16px] font-medium"
+                        style={{ color: isCompleted ? "#1F7A4D" : "#361A6D" }}
+                      >
+                        {c.title}
+                      </h3>
+                      {c.type === "chat" ? (() => {
+                        const meta = getPriorityMeta(c.priority);
+                        return (
+                          <span
+                            className="text-[11px] font-semibold"
+                            style={{
+                              color: meta.color,
+                              background: meta.bg,
+                              border: `1px solid ${meta.border}`,
+                              borderRadius: 999,
+                              padding: "2px 8px",
+                              width: "fit-content",
+                            }}
+                          >
+                            {meta.label}
+                          </span>
+                        );
+                      })() : null}
+                    </div>
+                    <div
+                      className="flex items-center gap-3"
+                      ref={menuOpenId === menuKey ? menuRef : null}
+                    >
+                      {isCompleted ? (
+                        <span
+                          className="flex h-6 w-6 items-center justify-center rounded-full"
+                          style={{ background: "#E5F4ED", border: "1px solid #A7E3C5" }}
+                        >
+                          <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="#1F7A4D"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            aria-hidden="true"
+                          >
+                            <polyline points="20 6 9 17 4 12" />
+                          </svg>
+                        </span>
+                      ) : (
+                        <Image src="/MinusCircle.svg" alt="Minimizar" width={20} height={20} />
+                      )}
+                      {c.type === "ticket" ? (
+                        <div className="relative">
+                          <button
+                            type="button"
+                            aria-label="Mais opcoes"
+                            aria-haspopup="menu"
+                            aria-expanded={menuOpenId === menuKey}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setMenuOpenId((current) => (current === menuKey ? null : menuKey));
+                            }}
+                            className="flex h-7 w-7 items-center justify-center rounded-full cursor-pointer hover:bg-[#E9E3FF]"
+                          >
+                            <Image src="/DotsThreeVertical.svg" alt="Mais opcoes" width={18} height={18} />
+                          </button>
+                          {menuOpenId === menuKey && (
+                            <div
+                              role="menu"
+                              className="absolute right-0 top-[calc(100%+8px)] w-[180px] rounded-xl border border-[#E2E8F8] bg-white p-2 text-sm text-[#191F33] shadow-[0px_18px_32px_rgba(63,85,199,0.16)]"
+                            >
+                              <button
+                                type="button"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  setMenuOpenId(null);
+                                  const action = c.status === "completed" ? "reopen" : "complete";
+                                  setPendingAction({
+                                    id: c.id,
+                                    type: c.type,
+                                    title: c.title,
+                                    status: c.status,
+                                    ticketType: c.type === "ticket" ? c.ticketType : undefined,
+                                    action,
+                                  });
+                                }}
+                                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left cursor-pointer hover:bg-[#F4F6FF]"
+                              >
+                                {c.status === "completed" ? "Reabrir" : "Concluir"}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  setMenuOpenId(null);
+                                  setPendingAction({
+                                    id: c.id,
+                                    type: c.type,
+                                    title: c.title,
+                                    status: c.status,
+                                    ticketType: c.type === "ticket" ? c.ticketType : undefined,
+                                    action: "delete",
+                                  });
+                                }}
+                                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[#C53030] cursor-pointer hover:bg-[#FFF2F2]"
+                              >
+                                Apagar
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      ) : null}
+                    </div>
+                  </header>
+
+                  <div className="flex items-center gap-3 w-full">
+                    {c.photoUrl ? (
+                      <img
+                        src={c.photoUrl}
+                        alt={c.userName}
+                        width={40}
+                        height={40}
+                        style={{ borderRadius: 8, objectFit: "cover" }}
+                      />
+                    ) : (
+                      <div
+                        aria-hidden
+                        style={{
+                          width: 40,
+                          height: 40,
+                          borderRadius: 8,
+                          WebkitMask: "url(/User.svg) center / contain no-repeat",
+                          mask: "url(/User.svg) center / contain no-repeat",
+                          background: isCompleted ? "#1F7A4D" : "#6B4DB8",
+                        }}
+                      />
+                    )}
+                    <div className="flex flex-col min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span
+                          style={{
+                            color: isCompleted ? "#1F7A4D" : "#361A6D",
+                            fontSize: 14,
+                            fontWeight: 500,
+                          }}
+                        >
+                          {c.userName}
+                        </span>
+                        {c.isTutor ? (
+                          <span
+                            className="text-[11px] font-medium uppercase"
+                            style={{
+                              color: isCompleted ? "#1F7A4D" : "#F17E00",
+                              border: isCompleted ? "1px solid #A7E3C5" : "1px solid #FFD7AD",
+                              borderRadius: 999,
+                              padding: "2px 6px",
+                            }}
+                          >
+                            Tutor
+                          </span>
+                        ) : null}
+                      </div>
+                      {c.nickname ? (
+                        <span
+                          style={{
+                            color: isCompleted ? "#2E8B57" : "#6B4DB8",
+                            fontSize: 14,
+                            fontWeight: 400,
+                          }}
+                        >
+                          {c.nickname}
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
+
+                  {c.type === "chat" ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedChat(c as SupportRoom);
+                        setChatModalOpen(true);
+                      }}
+                      className="mt-auto w-full flex items-center justify-center gap-2 rounded-md cursor-pointer"
+                      style={{
+                        padding: "10px 12px",
+                        background: isCompleted ? "#E5F4ED" : "#977CEC",
+                        color: isCompleted ? "#1F7A4D" : "#FCFDFF",
+                        fontSize: 14,
+                        fontWeight: 500,
+                        border: isCompleted ? "1px solid #A7E3C5" : "none",
+                      }}
+                    >
+                      {isCompleted ? (
+                        <span
+                          aria-hidden
+                          style={{
+                            width: 18,
+                            height: 18,
+                            display: "inline-block",
+                            WebkitMask: "url(/Chat.svg) center / contain no-repeat",
+                            mask: "url(/Chat.svg) center / contain no-repeat",
+                            background: "#1F7A4D",
+                          }}
+                        />
+                      ) : (
+                        <Image src="/Chat.svg" alt="Acessar chat" width={18} height={18} />
+                      )}
+                      Acessar Chat
+                    </button>
+                  ) : (
+                    <Link
+                      href={`/support/ticket/${c.id}?type=${c.ticketType}`}
+                      className="mt-auto w-full flex items-center justify-center gap-2 rounded-md cursor-pointer"
+                      style={{
+                        padding: "10px 12px",
+                        background: isCompleted ? "#E5F4ED" : "#977CEC",
+                        color: isCompleted ? "#1F7A4D" : "#FCFDFF",
+                        fontSize: 14,
+                        fontWeight: 500,
+                        border: isCompleted ? "1px solid #A7E3C5" : "none",
+                      }}
+                    >
+                      {isCompleted ? (
+                        <span
+                          aria-hidden
+                          style={{
+                            width: 18,
+                            height: 18,
+                            display: "inline-block",
+                            WebkitMask: "url(/Chat.svg) center / contain no-repeat",
+                            mask: "url(/Chat.svg) center / contain no-repeat",
+                            background: "#1F7A4D",
+                          }}
+                        />
+                      ) : (
+                        <Image src="/Chat.svg" alt="Acessar ticket" width={18} height={18} />
+                      )}
+                      Acessar Ticket
+                    </Link>
+                  )}
+                </article>
+              );
+            })}
+            </div>
+          )}
           <div className="md:hidden mt-4 px-4 flex items-center justify-center">
             <button
               type="button"
-              aria-label="Página anterior"
+              aria-label="Pagina anterior"
               onClick={() => goPage(page - 1)}
               disabled={page === 1}
               className="px-3 py-2 rounded-md border bg-white flex items-center justify-center cursor-pointer"
@@ -226,7 +853,7 @@ export function SupportPage() {
             </div>
             <button
               type="button"
-              aria-label="Próxima Página"
+              aria-label="Proxima Pagina"
               onClick={() => goPage(page + 1)}
               disabled={page === totalPages}
               className="px-3 py-2 rounded-md border bg-white flex items-center justify-center cursor-pointer"
@@ -238,7 +865,7 @@ export function SupportPage() {
             >
               <Image
                 src="/Arrow.svg"
-                alt="Próxima"
+                alt="Proxima"
                 width={13}
                 height={13}
                 className="object-contain rotate-180"
@@ -249,7 +876,7 @@ export function SupportPage() {
             <div className="bg-transparent p-0 flex items-center justify-center">
               <button
                 type="button"
-                aria-label="Página anterior"
+                aria-label="Pagina anterior"
                 onClick={() => goPage(page - 1)}
                 disabled={page === 1}
                 className="px-3 py-2 rounded-md border bg-white flex items-center justify-center cursor-pointer"
@@ -309,7 +936,7 @@ export function SupportPage() {
 
               <button
                 type="button"
-                aria-label="Próxima Página"
+                aria-label="Proxima Pagina"
                 onClick={() => goPage(page + 1)}
                 disabled={page === totalPages}
                 className="px-3 py-2 rounded-md border bg-white flex items-center justify-center cursor-pointer"
@@ -321,7 +948,7 @@ export function SupportPage() {
               >
                 <Image
                   src="/Arrow.svg"
-                  alt="Próxima"
+                  alt="Proxima"
                   width={13}
                   height={13}
                   className="object-contain rotate-180"
@@ -331,6 +958,148 @@ export function SupportPage() {
           </div>
         </section>
       </div>
+      <Modal
+        open={chatModalOpen && selectedChat !== null}
+        onClose={() => {
+          setChatModalOpen(false);
+          setSelectedChat(null);
+        }}
+        title="Detalhes do bate papo"
+        subtitle="Informações da solicitação"
+        maxWidth="max-w-xl"
+        footer={
+          <div className="flex items-center justify-end gap-3">
+            <button
+              type="button"
+              className="rounded-md border px-4 py-2 text-sm"
+              style={{ borderColor: "#D0D9F1", color: "#191F33" }}
+              onClick={() => {
+                setChatModalOpen(false);
+                setSelectedChat(null);
+              }}
+              disabled={chatActionLoading}
+            >
+              Fechar
+            </button>
+            <button
+              type="button"
+              className="rounded-md px-4 py-2 text-sm text-white"
+              style={{ background: "#256740", opacity: chatActionLoading ? 0.7 : 1 }}
+              onClick={handleConnectChat}
+              disabled={chatActionLoading}
+            >
+              {chatActionLoading ? "Conectando..." : "Conectar"}
+            </button>
+          </div>
+        }
+      >
+        {selectedChat ? (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              {(() => {
+                const meta = getPriorityMeta(selectedChat.priority);
+                return (
+                  <span
+                    className="text-[11px] font-semibold"
+                    style={{
+                      color: meta.color,
+                      background: meta.bg,
+                      border: `1px solid ${meta.border}`,
+                      borderRadius: 999,
+                      padding: "2px 8px",
+                      width: "fit-content",
+                    }}
+                  >
+                    {meta.label}
+                  </span>
+                );
+              })()}
+            </div>
+
+            <div className="rounded-lg border" style={{ borderColor: "#E2E8F8" }}>
+              <div className="p-4 space-y-3">
+                <div>
+                  <div className="text-xs" style={{ color: "#8A94AB" }}>
+                    Solicitante
+                  </div>
+                  <div className="text-sm" style={{ color: "#191F33", fontWeight: 600 }}>
+                    {selectedChat.requesterName || selectedChat.userName}
+                  </div>
+                  <div className="text-xs" style={{ color: "#5A6480" }}>
+                    {selectedChat.requesterRole || (selectedChat.isTutor ? "Tutor" : "Usuário")}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-xs" style={{ color: "#8A94AB" }}>
+                    Motivo
+                  </div>
+                  <div className="text-sm" style={{ color: "#191F33" }}>
+                    {selectedChat.reason || "Não informado"}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-xs" style={{ color: "#8A94AB" }}>
+                    Descrição
+                  </div>
+                  <div className="text-sm" style={{ color: "#191F33" }}>
+                    {selectedChat.description || "Sem descrição"}
+                  </div>
+                </div>
+
+                {selectedChat.assignedAdminName ? (
+                  <div>
+                    <div className="text-xs" style={{ color: "#8A94AB" }}>
+                      Em atendimento por
+                    </div>
+                    <div className="text-sm" style={{ color: "#191F33" }}>
+                      {selectedChat.assignedAdminName}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        ) : null}
+      </Modal>
+
+      <Modal
+        open={pendingAction !== null}
+        onClose={() => setPendingAction(null)}
+        title={confirmTitle}
+        subtitle={confirmSubtitle}
+        maxWidth="max-w-lg"
+        footer={
+          <div className="flex items-center justify-end gap-3">
+            <button
+              type="button"
+              className="rounded-md border px-4 py-2 text-sm"
+              style={{ borderColor: "#D0D9F1", color: "#191F33" }}
+              onClick={() => setPendingAction(null)}
+              disabled={actionLoading}
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              className="rounded-md px-4 py-2 text-sm text-white"
+              style={{
+                background: pendingAction?.action === "delete" ? "#C53030" : "#256740",
+                opacity: actionLoading ? 0.7 : 1,
+              }}
+              onClick={handleConfirmAction}
+              disabled={actionLoading}
+            >
+              {actionLoading ? "Processando..." : "Confirmar"}
+            </button>
+          </div>
+        }
+      >
+        <p className="text-sm" style={{ color: "#5A6480" }}>
+          {confirmDescription}
+        </p>
+      </Modal>
     </main>
   );
 }

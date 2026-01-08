@@ -1,9 +1,37 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import AgoraRTC, { type IAgoraRTCClient } from "agora-rtc-sdk-ng";
 import Image from "@/components/ui/Image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { ChevronLeft, CircleEllipsis, SendHorizontal } from "lucide-react";
+import { ChevronLeft, CircleEllipsis, SendHorizontal, User } from "lucide-react";
+import { invokeFunction } from "@/services/api";
+
+const AGORA_APP_ID = import.meta.env.VITE_AGORA_APP_ID ?? import.meta.env.AGORA_APP_ID;
+
+const decodeJwtPayload = (token?: string | null) => {
+  if (!token) return null;
+  const parts = token.split(".");
+  if (parts.length < 2) return null;
+  const raw = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+  const padded = raw.padEnd(raw.length + (4 - (raw.length % 4 || 4)), "=");
+  try {
+    return JSON.parse(atob(padded));
+  } catch {
+    return null;
+  }
+};
+
+const toNumericUid = (value: unknown) => {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  const str = String(value ?? "");
+  if (!str) return Math.floor(Math.random() * 900000000) + 1;
+  let hash = 0;
+  for (let i = 0; i < str.length; i += 1) {
+    hash = (hash * 31 + str.charCodeAt(i)) >>> 0;
+  }
+  return (hash % 900000000) + 1;
+};
 
 export type Participant = {
   id: string;
@@ -23,9 +51,12 @@ export type ChatMessage = {
   content: string;
   time: string;
   type: "incoming" | "outgoing";
+  isTutor?: boolean;
+  isAdmin?: boolean;
 };
 
 interface ChatViewProps {
+  roomId?: string;
   roomTitle: string;
   roomSubtitle: string;
   owner: RoomOwner;
@@ -37,6 +68,7 @@ interface ChatViewProps {
 }
 
 export function ChatView({
+  roomId,
   roomTitle,
   roomSubtitle,
   owner,
@@ -47,6 +79,8 @@ export function ChatView({
   onSendMessage,
 }: ChatViewProps) {
   const [draftMessage, setDraftMessage] = useState("");
+  const messagesRef = useRef<HTMLDivElement | null>(null);
+  const agoraClientRef = useRef<IAgoraRTCClient | null>(null);
 
   const visibleParticipants = useMemo(() => participants.slice(0, 3), [participants]);
   const extraParticipants = participants.length - visibleParticipants.length;
@@ -58,121 +92,213 @@ export function ChatView({
     setDraftMessage("");
   };
 
+  useEffect(() => {
+    const container = messagesRef.current;
+    if (!container) return;
+    container.scrollTop = container.scrollHeight;
+  }, [messages]);
+
+  useEffect(() => {
+    if (!roomId || !AGORA_APP_ID) return;
+    let cancelled = false;
+
+    const cleanup = async () => {
+      const client = agoraClientRef.current;
+      if (!client) return;
+      try {
+        client.removeAllListeners();
+      } catch {
+        // ignore
+      }
+      try {
+        await client.leave();
+      } catch {
+        // ignore
+      }
+      agoraClientRef.current = null;
+    };
+
+    const joinAgora = async () => {
+      await cleanup();
+      try {
+        const rawToken = localStorage.getItem("token");
+        const payload = decodeJwtPayload(rawToken);
+        const uid = toNumericUid(
+          payload?.sub ?? payload?.user_id ?? payload?.userId ?? payload?.id ?? rawToken,
+        );
+        const channelName = `room-${roomId}`;
+        const tokenResponse = await invokeFunction("agora-token", {
+          method: "POST",
+          body: { channelName, uid },
+        });
+        const token = tokenResponse?.token ?? null;
+        const client = AgoraRTC.createClient({ mode: "live", codec: "vp8" });
+        client.setClientRole("audience");
+        client.on("user-published", async (user, mediaType) => {
+          if (mediaType !== "audio") return;
+          await client.subscribe(user, mediaType);
+          user.audioTrack?.play();
+        });
+        client.on("user-unpublished", (user, mediaType) => {
+          if (mediaType !== "audio") return;
+          user.audioTrack?.stop();
+        });
+        await client.join(AGORA_APP_ID, channelName, token, uid);
+        if (cancelled) {
+          await client.leave();
+          return;
+        }
+        agoraClientRef.current = client;
+      } catch {
+        // ignore agora join errors
+      }
+    };
+
+    void joinAgora();
+
+    return () => {
+      cancelled = true;
+      void cleanup();
+    };
+  }, [roomId]);
+
   return (
-    <main className="-translate-y-7 text-md w-full max-w-[1100px] mx-auto">
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-2">
-        <div className="flex items-start gap-4">
-          <button
-            onClick={onBack}
-            className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[#E0D7FF] bg-[#F7F9FF] text-[#4C2A7A] transition-transform hover:-translate-y-0.5"
-            aria-label="Voltar para lista de chats"
-          >
-            <ChevronLeft className="h-6 w-6" strokeWidth={2.5} />
-          </button>
-          <div>
-            <h1 className="text-[#1F1235] text-2xl font-bold">{roomTitle}</h1>
-            <p className="text-sm font-medium uppercase tracking-wide text-[#7A7396]">
-              {roomSubtitle}
-            </p>
-          </div>
+    <main className="mx-auto w-full max-w-[1100px] text-md">
+      <header className="mb-4 flex items-center gap-3">
+        <button
+          onClick={onBack}
+          className="flex h-10 w-10 items-center justify-center rounded-full border border-[#E2E8F8] text-[#5A6480] hover:bg-[#F4F6FF]"
+          aria-label="Voltar para lista de chats"
+        >
+          <ChevronLeft className="h-5 w-5" />
+        </button>
+        <div>
+          <h1 className="text-xl font-semibold text-[#1F1235]">{roomTitle}</h1>
+          <p className="text-sm text-[#7A7396]">{roomSubtitle}</p>
         </div>
       </header>
-      <div className="flex h-full flex-col rounded-3xl border border-[#E2E8F8] bg-white p-0 shadow-[0px_24px_60px_rgba(53,18,87,0.08)]">
-        <section className="flex flex-col gap-6 rounded-t-3xl bg-[#E2E8F8] p-4 text-[#1F1235] md:flex-row md:items-center md:justify-between">
-          <div className="flex items-center gap-4">
-            <div className="h-16 w-16 overflow-hidden rounded-2xl border border-[#E2D5FF] bg-white">
-              <Image
-                src={owner.avatarUrl || "/UserCircle.svg"}
-                alt={owner.name}
-                width={64}
-                height={64}
-                className="h-full w-full object-cover"
-              />
+
+      <div className="flex h-[620px] flex-col rounded-3xl border border-[#E6EBFA] bg-white shadow-[0px_24px_60px_rgba(53,18,87,0.08)]">
+        <section className="flex flex-col items-start justify-between gap-4 rounded-t-3xl border-b border-[#E6EBFA] bg-[#F9FAFF] px-6 py-4 md:flex-row md:items-center">
+          <div className="flex items-center gap-3">
+            <div className="h-12 w-12 overflow-hidden rounded-full bg-[#EEF1FF]">
+              {owner.avatarUrl && owner.avatarUrl !== "/UserCircle.svg" ? (
+                <Image
+                  src={owner.avatarUrl}
+                  alt={owner.name}
+                  width={48}
+                  height={48}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <div className="flex h-12 w-12 items-center justify-center text-[#191F33]">
+                  <User className="h-5 w-5" aria-hidden />
+                </div>
+              )}
             </div>
-            <div className="space-y-1">
-              <p className="text-sm uppercase tracking-wide text-[#7A7396]">Host da sala</p>
-              <p className="text-xl font-semibold">{owner.name}</p>
-              {owner.subtitle && <p className="text-sm text-[#6F6C80]">{owner.subtitle}</p>}
+            <div>
+              <p className="text-sm font-semibold text-[#191F33]">{owner.name}</p>
+              {owner.subtitle && <p className="text-xs text-[#7A7396]">{owner.subtitle}</p>}
             </div>
           </div>
 
-          <div className="flex flex-col gap-3 md:items-end">
-            <div className="flex items-center gap-4">
-              <div className="flex -space-x-3">
-                {visibleParticipants.map((participant) => (
-                  <div
-                    key={participant.id}
-                    className="h-12 w-12 overflow-hidden rounded-full border-2 border-white bg-[#EEEAFD]"
-                  >
-                    <Image
-                      src={participant.avatarUrl || "/UserCircle.svg"}
-                      alt={participant.name}
-                      width={48}
-                      height={48}
-                      className="h-full w-full object-cover"
-                    />
-                  </div>
-                ))}
-              </div>
-              {extraParticipants > 0 && (
-                <span className="text-sm font-normal text-[#4C2A7A]">
-                  +{participants.length} Online
-                </span>
-              )}
-              <button
-                onClick={onMoreOptions}
-                className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[#E0D7FF] bg-white text-[#4C2A7A]"
-                aria-label="Mais opções"
-              >
-                <CircleEllipsis className="h-5 w-5" />
-              </button>
-            </div>
+          <div className="flex items-center gap-4">
+            <span className="text-xs font-medium text-[#6B6F85]">
+              {participants.length} online
+            </span>
+            <button
+              onClick={onMoreOptions}
+              className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#E2E8F8] bg-white text-[#6B6F85]"
+              aria-label="Mais opcoes"
+            >
+              <CircleEllipsis className="h-5 w-5" />
+            </button>
           </div>
         </section>
 
-        <section className="flex flex-col p-4">
-          <div className="space-y-6 overflow-y-auto pr-2" style={{ maxHeight: 420 }}>
+        <section className="flex min-h-0 flex-1 flex-col px-6 py-4">
+          <div ref={messagesRef} className="flex-1 space-y-6 overflow-y-auto pr-2">
             {messages.map((message, index) => {
               const isOutgoing = message.type === "outgoing";
               const previousMessage = index > 0 ? messages[index - 1] : undefined;
-              const showSenderName = !previousMessage || previousMessage.type !== message.type;
+              const previousSender =
+                previousMessage?.senderName?.trim().toLowerCase() ?? "";
+              const currentSender =
+                message.senderName?.trim().toLowerCase() ?? "";
+              const previousTutor = Boolean(previousMessage?.isTutor);
+              const currentTutor = Boolean(message.isTutor);
+              const showSenderName =
+                !previousMessage ||
+                previousMessage.type !== message.type ||
+                previousSender !== currentSender ||
+                previousTutor !== currentTutor;
+              const isAdminMessage = Boolean(message.isAdmin);
+              const tutorName = owner.name?.trim().toLowerCase();
+              const senderName = message.senderName?.trim().toLowerCase();
+              const matchesOwner =
+                tutorName && senderName && tutorName === senderName;
+              const isTutorMessage =
+                !isAdminMessage && !isOutgoing && (message.isTutor || matchesOwner);
+              const displaySenderName = message.senderName?.trim()
+                ? message.senderName
+                : isTutorMessage
+                ? owner.name
+                : "Usuario";
               return (
                 <div
                   key={message.id}
-                  className={cn(
-                    "flex w-full flex-col gap-2",
-                    isOutgoing ? "items-end" : "items-start",
-                  )}
+                  className={cn("flex w-full flex-col gap-2", isOutgoing ? "items-end" : "items-start")}
                 >
                   <div
                     className={cn(
-                      "max-w-[80%] rounded-[26px] px-5 py-4 text-sm shadow-sm",
-                      isOutgoing
-                        ? "bg-[#977cec] text-white rounded-br-[8px]"
-                        : "bg-[#fff2e0] text-[#191f33] rounded-bl-[8px]",
+                      "max-w-[70%] rounded-2xl px-4 py-3 text-sm shadow-sm",
+                      isAdminMessage
+                        ? "bg-[#2F9E44] text-white"
+                        : isOutgoing
+                        ? "bg-[#8F76E8] text-white"
+                        : isTutorMessage
+                        ? "bg-[#2F6BFF] text-white"
+                        : "bg-[#FFF2E0] text-[#191F33]",
                     )}
                   >
                     {showSenderName && (
                       <span
                         className={cn(
-                          "text-xs font-semibold uppercase tracking-wide",
-                          isOutgoing ? "text-white/70" : "text-[#a05d0b]",
+                          isTutorMessage
+                            ? "text-[12px] font-semibold text-white/80"
+                            : "text-[11px] font-semibold tracking-wide",
+                          isAdminMessage
+                            ? "text-white/80"
+                            : isOutgoing
+                            ? "text-white/80"
+                            : isTutorMessage
+                            ? "text-white/80"
+                            : "text-[#A05D0B]",
                         )}
                       >
-                        {isOutgoing ? "Você" : message.senderName}
+                        {isAdminMessage
+                          ? isOutgoing
+                            ? "Você - Admin"
+                            : `${displaySenderName} - Admin`
+                          : isTutorMessage
+                          ? `${displaySenderName} - tutor`
+                          : isOutgoing
+                          ? "Você"
+                          : displaySenderName}
                       </span>
                     )}
                     <p className="mt-2 leading-relaxed">{message.content}</p>
                   </div>
-                  <span className="text-xs font-medium text-[#7A7396]">{message.time}</span>
+                  <span className="text-xs text-[#7A7396]">{message.time}</span>
                 </div>
               );
             })}
           </div>
         </section>
-        <div className="rounded-b-3xl bg-[#E2E8F8] p-4 text-[#1F1235] md:flex-row md:items-center md:justify-between">
+
+        <div className="rounded-b-3xl border-t border-[#E6EBFA] bg-[#F9FAFF] px-6 py-4">
           <form
-            className="flex flex-col gap-4 sm:flex-row"
+            className="flex items-center gap-3"
             onSubmit={(event) => {
               event.preventDefault();
               handleSend();
@@ -181,14 +307,13 @@ export function ChatView({
             <Input
               value={draftMessage}
               onChange={(event) => setDraftMessage(event.target.value)}
-              placeholder="Escreva uma mensagem"
-              className="h-14 rounded-[24px] border border-[#D7D3F3] bg-white px-5 text-base text-[#1F1235] placeholder:text-[#A09BBF]"
+              placeholder="Digite aqui..."
+              className="h-12 flex-1 rounded-xl border border-[#D0D9F1] bg-white px-4 text-sm text-[#1F1235] placeholder:text-[#A09BBF]"
             />
             <Button
               type="submit"
-              className="h-14 rounded-[24px] bg-[#977cec] px-8 text-base font-semibold text-white hover:bg-[#8a6fdb]"
+              className="h-12 w-12 rounded-xl bg-[#8F76E8] p-0 text-white hover:bg-[#8066DD]"
             >
-              Enviar
               <SendHorizontal className="h-5 w-5" />
             </Button>
           </form>
@@ -197,3 +322,6 @@ export function ChatView({
     </main>
   );
 }
+
+
+

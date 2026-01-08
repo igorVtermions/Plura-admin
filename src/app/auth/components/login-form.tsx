@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import React, { useState } from "react";
-import { Eye, EyeClosed } from "lucide-react";
+import { Eye, EyeClosed, Loader2 } from "lucide-react";
 import Link from "@/router/Link";
 import { useRouter } from "@/lib/router";
 import { Button } from "@/components/ui/button";
@@ -118,8 +118,15 @@ export function LoginForm() {
         </div>
       )}
 
-      <Button type="submit" className="w-full" disabled={loading}>
-        {loading ? "Entrando..." : "Entrar"}
+      <Button type="submit" className="w-full" disabled={loading} aria-busy={loading}>
+        {loading ? (
+          <>
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+            <span className="sr-only">Entrando...</span>
+          </>
+        ) : (
+          "Entrar"
+        )}
       </Button>
     </form>
   );

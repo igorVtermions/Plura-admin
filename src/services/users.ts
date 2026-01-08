@@ -89,9 +89,17 @@ function extractArray(source: Record<string, unknown>, key: string): unknown[] {
     const nested = direct as Record<string, unknown>;
     if (Array.isArray(nested.data)) return nested.data;
     if (Array.isArray(nested.items)) return nested.items;
+    if (Array.isArray(nested.list)) return nested.list;
+    if (Array.isArray(nested[key])) return nested[key];
   }
 
   if (Array.isArray(source.data)) return source.data;
+  if (source.data && typeof source.data === "object") {
+    const data = source.data as Record<string, unknown>;
+    if (Array.isArray(data[key])) return data[key];
+    if (Array.isArray(data.items)) return data.items;
+    if (Array.isArray(data.list)) return data.list;
+  }
   if (Array.isArray(source.items)) return source.items;
   if (Array.isArray(source.list)) return source.list;
 
@@ -134,6 +142,13 @@ function normalizeFollowUser(raw: unknown): UserCardUser | null {
       ? base.imageUrl
       : null;
 
+  const role =
+    typeof base.role === "string"
+      ? base.role
+      : typeof data.role === "string"
+      ? data.role
+      : null;
+
   const email = typeof base.email === "string" ? base.email : null;
   const phone = typeof base.phone === "string" ? base.phone : null;
   const bio = typeof base.bio === "string" ? base.bio : null;
@@ -163,6 +178,7 @@ function normalizeFollowUser(raw: unknown): UserCardUser | null {
     phone,
     bio,
     avatarUrl: typeof avatarRaw === "string" ? avatarRaw : null,
+    role,
     status: resolveStatus(base.status),
     isVerified,
     createdAt,
@@ -214,6 +230,72 @@ function mapFollowResponse(
   };
 }
 
+function buildFollowQuery(
+  base: string,
+  params: Record<string, string | number | undefined | null>,
+) {
+  const search = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value === undefined || value === null) return;
+    search.set(key, String(value));
+  });
+  const query = search.toString();
+  return query ? `${base}?${query}` : base;
+}
+
+function extractArrayByKeys(
+  source: Record<string, unknown>,
+  keys: string[],
+): unknown[] {
+  for (const key of keys) {
+    const items = extractArray(source, key);
+    if (items.length > 0) return items;
+  }
+  return [];
+}
+
+function normalizeListPayload(
+  payload: unknown,
+  params?: FollowParams,
+  keys: string[] = ["items", "data"],
+): FollowListResult {
+  const data = payload && typeof payload === "object" ? (payload as Record<string, unknown>) : {};
+  const rawItems = extractArrayByKeys(data, keys);
+  const items = rawItems
+    .map(normalizeFollowUser)
+    .filter((user): user is UserCardUser => user !== null);
+
+  const meta =
+    data.meta && typeof data.meta === "object" ? (data.meta as Record<string, unknown>) : undefined;
+
+  const total = extractNumber(
+    data.count,
+    data.total,
+    data.totalCount,
+    meta?.total,
+    meta?.count,
+  );
+
+  const pageSize =
+    extractNumber(meta?.perPage, data.perPage, params?.perPage) ?? FOLLOW_DEFAULT_PAGE_SIZE;
+
+  const resolvedPageSize = pageSize && pageSize > 0 ? pageSize : FOLLOW_DEFAULT_PAGE_SIZE;
+
+  const hasMore =
+    typeof data.hasMore === "boolean"
+      ? data.hasMore
+      : total != null
+      ? Math.max(1, params?.page ?? 1) * resolvedPageSize < total
+      : items.length >= resolvedPageSize;
+
+  return {
+    items,
+    total,
+    pageSize: resolvedPageSize,
+    hasMore,
+  };
+}
+
 export async function fetchUsers(params: UserListParams = {}): Promise<UserListResponse> {
   const functionPath = buildUsersFunctionPath({
     search: params.search,
@@ -231,8 +313,8 @@ export async function fetchUsers(params: UserListParams = {}): Promise<UserListR
 export async function banUser(userId: string, payload?: BanUserPayload): Promise<BanUserResponse> {
   const body = payload ?? DEFAULT_BAN_PAYLOAD;
 
-  const response = await invokeFunction<BanUserResponse>("user-update-profile", {
-    method: "PATCH",
+  const response = await invokeFunction<BanUserResponse>("admin-user-ban", {
+    method: "POST",
     body: {
       userId,
       status: "banned",
@@ -249,8 +331,8 @@ export async function unbanUser(
 ): Promise<BanUserResponse> {
   const body = payload ?? DEFAULT_UNBAN_PAYLOAD;
 
-  const response = await invokeFunction<BanUserResponse>("user-update-profile", {
-    method: "PATCH",
+  const response = await invokeFunction<BanUserResponse>("admin-user-ban", {
+    method: "POST",
     body: {
       userId,
       status: body.status ?? "active",
@@ -261,17 +343,37 @@ export async function unbanUser(
 }
 
 export async function fetchUserProfile(userId: string): Promise<UserProfileResponse> {
-  const response = await invokeFunction<UserProfileResponse>("user-profile", {
+  const params = new URLSearchParams({ userId: String(userId) });
+  const response = await invokeFunction<UserProfileResponse>(`user-profile?${params}`, {
     method: "GET",
-    body: { userId },
   });
   return (response ?? {}) as UserProfileResponse;
 }
 
-export async function fetchUserSessionsAdmin(userId: string): Promise<any> {
-  const response = await invokeFunction<unknown>("room-history", {
+export async function fetchUserReports(userId: string) {
+  const params = new URLSearchParams({ userId: String(userId) });
+  const response = await invokeFunction<unknown>(`user-reports?${params}`, {
     method: "GET",
-    body: { userId },
+  });
+  return response as { items?: unknown[]; total?: number };
+}
+
+export async function fetchUserBanStatus(userId: string): Promise<UserStatus | null> {
+  const params = new URLSearchParams({ userId: String(userId) });
+  const response = await invokeFunction<unknown>(`admin-user-ban?${params}`, {
+    method: "GET",
+  });
+  const data = response && typeof response === "object" ? (response as Record<string, unknown>) : {};
+  const raw = typeof data.status === "string" ? data.status : "";
+  const normalized = raw.trim().toLowerCase();
+  if (normalized === "active" || normalized === "banned") return normalized;
+  return null;
+}
+
+export async function fetchUserSessionsAdmin(userId: string): Promise<any> {
+  const params = new URLSearchParams({ userId: String(userId) });
+  const response = await invokeFunction<unknown>(`user-room-history?${params}`, {
+    method: "GET",
   });
   return response ?? null;
 }
@@ -280,9 +382,14 @@ export async function fetchFollowers(
   userId: string,
   params?: FollowParams,
 ): Promise<FollowListResult> {
-  const response = await invokeFunction<unknown>("user-follow", {
+  const functionPath = buildFollowQuery("user-follow", {
+    userId,
+    direction: "followers",
+    page: params?.page,
+    perPage: params?.perPage,
+  });
+  const response = await invokeFunction<unknown>(functionPath, {
     method: "GET",
-    body: { userId, direction: "followers", ...params },
   });
   return mapFollowResponse(response, "followers", params);
 }
@@ -291,9 +398,94 @@ export async function fetchFollowing(
   userId: string,
   params?: FollowParams,
 ): Promise<FollowListResult> {
-  const response = await invokeFunction<unknown>("user-follow", {
-    method: "GET",
-    body: { userId, direction: "following", ...params },
+  const functionPath = buildFollowQuery("user-follow", {
+    userId,
+    direction: "following",
+    page: params?.page,
+    perPage: params?.perPage,
   });
-  return mapFollowResponse(response, "following", params);
+  const response = await invokeFunction<unknown>(functionPath, {
+    method: "GET",
+  });
+  const primary = mapFollowResponse(response, "following", params);
+  if (primary.items.length > 0) return primary;
+  const fallback = mapFollowResponse(response, "followers", params);
+  return fallback.items.length > 0 ? fallback : primary;
+}
+
+export async function fetchTutorFollowing(
+  userId: string,
+  params?: FollowParams,
+): Promise<FollowListResult> {
+  const functionPath = buildFollowQuery("user-tutor-follow", {
+    action: "get-following",
+    userId,
+    page: params?.page,
+    perPage: params?.perPage,
+  });
+  const response = await invokeFunction<unknown>(functionPath, { method: "GET" });
+  return normalizeListPayload(response, params, ["following", "items", "data"]);
+}
+
+export type FollowStatsResult = {
+  followers: number;
+  following: number;
+  followersUsers?: number | null;
+  followersTutors?: number | null;
+  followingUsers?: number | null;
+  followingTutors?: number | null;
+};
+
+export async function fetchFollowStats(userId: string): Promise<FollowStatsResult> {
+  const functionPath = buildFollowQuery("get-follow-stats", {
+    userId,
+    includeTutor: "true",
+  });
+  const response = await invokeFunction<unknown>(functionPath, { method: "GET" });
+  const data = response && typeof response === "object" ? (response as Record<string, unknown>) : {};
+
+  const followersUsers = extractNumber(
+    data.followersCount,
+    data.followers,
+    data.followersTotal,
+    data.totalFollowers,
+    (data.followers as Record<string, unknown> | undefined)?.count,
+    (data.followers as Record<string, unknown> | undefined)?.total,
+  );
+  const followingUsers = extractNumber(
+    data.followingCount,
+    data.following,
+    data.followingTotal,
+    data.totalFollowing,
+    (data.following as Record<string, unknown> | undefined)?.count,
+    (data.following as Record<string, unknown> | undefined)?.total,
+  );
+  const followersTutors = extractNumber(
+    data.followersTutorsCount,
+    data.followersTutorCount,
+    data.tutorFollowersCount,
+    data.tutorFollowers,
+  );
+  const followingTutors = extractNumber(
+    data.followingTutorsCount,
+    data.followingTutorCount,
+    data.tutorFollowingCount,
+    data.tutorFollowing,
+  );
+
+  const followers =
+    extractNumber(data.totalFollowers, data.total_followers, data.followersTotal) ??
+    (followersUsers ?? 0) + (followersTutors ?? 0);
+  const following =
+    extractNumber(data.totalFollowing, data.total_following, data.followingTotal) ??
+    (followingUsers ?? 0) + (followingTutors ?? 0);
+
+  return {
+    followers,
+    following,
+    followersUsers: followersUsers ?? null,
+    followersTutors: followersTutors ?? null,
+    followingUsers: followingUsers ?? null,
+    followingTutors: followingTutors ?? null,
+  };
 }

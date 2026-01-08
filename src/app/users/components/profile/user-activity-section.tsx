@@ -21,15 +21,17 @@ export const UserActivitySection: React.FC<Props> = ({
   <section className="mt-10 space-y-6">
     <header className="flex items-center justify-between">
       <h2 className="text-lg font-semibold text-[#191F33]">Atividade</h2>
-      <span className="text-sm text-[#8A94AB]">
-        {liveHistoryTotal} sala{liveHistoryTotal === 1 ? "" : "s"} registradas
-      </span>
+      {liveHistoryTotal > 0 && (
+        <span className="text-sm text-[#8A94AB]">
+          {liveHistoryTotal} sala{liveHistoryTotal === 1 ? "" : "s"} registradas
+        </span>
+      )}
     </header>
 
     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
       {Array.isArray(finishedSessions) && finishedSessions.length > 0 ? (
         finishedSessions.map((item) => {
-          const id = String(item.roomHistoryId ?? item.roomId ?? item.id ?? Math.random());
+          const historyId = String(item.roomHistoryId ?? item.id ?? item.roomId ?? Math.random());
           const title =
             typeof item.title === "string"
               ? item.title
@@ -43,14 +45,14 @@ export const UserActivitySection: React.FC<Props> = ({
 
           return (
             <EndedRoomCard
-              key={id}
-              id={id}
+              key={historyId}
+              id={historyId}
               startAt={startAt}
               endAt={endAt}
               topic={title}
               host={tutorName}
               liveUsers={[]}
-              onView={(rid) => window.location.assign(`/rooms/${rid}`)}
+              onView={(rid) => window.location.assign(`/rooms/history/${rid}`)}
             />
           );
         })

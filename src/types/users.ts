@@ -25,6 +25,7 @@ export type UserCardUser = {
   phone?: string | null;
   bio?: string | null;
   avatarUrl?: string | null;
+  role?: string | null;
   status: UserStatus;
   isVerified: boolean;
   createdAt?: string | null;

@@ -1,5 +1,6 @@
 // src/features/instructors/components/profile/InstructorFollowersModal.tsx
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { User as UserIcon } from "lucide-react";
 import Modal from "@/components/ui/Modal";
 import Image from "@/components/ui/Image";
@@ -39,6 +40,7 @@ export const InstructorFollowersModal: React.FC<Props> = ({
   tutorId,
   fetchFollowers,
 }) => {
+  const navigate = useNavigate();
   const [state, setState] = useState<State>(INITIAL_STATE);
 
   const loadPage = useCallback(
@@ -53,7 +55,7 @@ export const InstructorFollowersModal: React.FC<Props> = ({
       try {
         const result = await fetchFollowers(tutorId, page);
         setState((prev) => ({
-          items: reset ? result.items : [...prev.items, ...result.items],
+          items: result.items,
           page,
           hasMore: result.hasMore,
           loading: false,
@@ -93,15 +95,7 @@ export const InstructorFollowersModal: React.FC<Props> = ({
     void loadPage(targetPage, reset);
   };
 
-  const countLabel = useMemo(() => {
-    if (state.items.length === 0) return "";
-    if (typeof state.total === "number" && state.total >= state.items.length) {
-      const noun = state.total === 1 ? "seguidor" : "seguidores";
-      return `${state.items.length} de ${state.total} ${noun}`;
-    }
-    const noun = state.items.length === 1 ? "seguidor" : "seguidores";
-    return `${state.items.length} ${noun}`;
-  }, [state.items.length, state.total]);
+  const countLabel = useMemo(() => "", []);
 
   return (
     <Modal
@@ -137,15 +131,24 @@ export const InstructorFollowersModal: React.FC<Props> = ({
           )}
 
           {state.items.map((follower) => {
-            const joinedDate =
-              follower.followedAt && !Number.isNaN(new Date(follower.followedAt).getTime())
-                ? new Date(follower.followedAt).toLocaleDateString("pt-BR")
-                : null;
+            const handleOpenProfile = () => {
+              navigate(`/users/${follower.id}`);
+              onClose();
+            };
 
             return (
               <div
                 key={follower.id}
-                className="flex items-center justify-between gap-3 rounded-lg border border-[#E2E8F8] bg-white px-3 py-2"
+                role="button"
+                tabIndex={0}
+                onClick={handleOpenProfile}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    handleOpenProfile();
+                  }
+                }}
+                className="flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-[#E2E8F8] bg-white px-3 py-2 transition hover:border-[#C8D2F2] hover:bg-[#FBFCFF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6350C9]"
               >
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-[#F4F6FF]">
@@ -170,7 +173,6 @@ export const InstructorFollowersModal: React.FC<Props> = ({
                     </div>
                   </div>
                 </div>
-                {joinedDate && <span className="text-xs text-[#8A94AB]">Desde {joinedDate}</span>}
               </div>
             );
           })}
@@ -189,12 +191,22 @@ export const InstructorFollowersModal: React.FC<Props> = ({
           )}
         </div>
 
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-center">
           <div className="text-xs text-[#8A94AB]">{countLabel}</div>
-          {state.hasMore && state.items.length > 0 && (
-            <Button onClick={handleLoadMore} size="sm" disabled={state.loading}>
-              {state.loading ? "Carregando..." : "Carregar mais"}
-            </Button>
+          {state.items.length >= 5 && (
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={() => void loadPage(Math.max(1, state.page - 1), false)}
+                size="sm"
+                variant="outline"
+                disabled={state.loading || state.page <= 1}
+              >
+                Anterior
+              </Button>
+              <Button onClick={handleLoadMore} size="sm" disabled={state.loading || !state.hasMore}>
+                {state.loading ? "Carregando..." : "Próxima página"}
+              </Button>
+            </div>
           )}
         </div>
       </div>

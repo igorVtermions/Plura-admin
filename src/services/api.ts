@@ -16,6 +16,18 @@ export const supabase =
 
 type InvokeHeaders = Record<string, string>;
 
+function handleUnauthorizedRedirect() {
+  try {
+    setClientToken(null);
+  } catch {}
+  if (typeof window !== "undefined") {
+    try {
+      if (window.location.pathname === "/login") return;
+      window.location.assign("/login");
+    } catch {}
+  }
+}
+
 function shouldSerializeBody(body: unknown): body is Record<string, unknown> | unknown[] {
   if (!body || typeof body !== "object") return false;
   if (body instanceof FormData) return false;
@@ -73,6 +85,9 @@ export async function invokeFunction<T = unknown>(
   });
 
   if (error) {
+    if (typeof error === "object" && error && "status" in error && (error as any).status === 401) {
+      handleUnauthorizedRedirect();
+    }
     console.error(`Error invoking function '${functionName}':`, error);
     throw error;
   }
@@ -119,6 +134,15 @@ export function setClientToken(token?: string | null) {
   if (typeof window === "undefined") return;
   if (token) localStorage.setItem("token", token);
   else localStorage.removeItem("token");
+}
+
+export function getClientToken() {
+  if (typeof window === "undefined") return null;
+  try {
+    return localStorage.getItem("token");
+  } catch {
+    return null;
+  }
 }
 
 export default api;

@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Image from "@/components/ui/Image";
 import { LiveRoomCard } from "./live-room-card";
 import { SoonRoomCard } from "./soon-room-card";
@@ -16,6 +17,17 @@ type RoomUI = {
   endAt?: string | Date;
   users?: User[];
 };
+
+function parseTimestamp(value: unknown): Date | undefined {
+  if (value instanceof Date) return isNaN(value.getTime()) ? undefined : value;
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  const hasTimezone = /([zZ]|[+-]\d{2}:\d{2})$/.test(trimmed);
+  const normalized = hasTimezone ? trimmed : `${trimmed}Z`;
+  const parsed = new Date(normalized);
+  return isNaN(parsed.getTime()) ? undefined : parsed;
+}
 
 function adaptRoom(r: RoomApi): RoomUI | null {
   if (!r) return null;
@@ -41,14 +53,8 @@ function adaptRoom(r: RoomApi): RoomUI | null {
         )
       : [];
 
-  const startAt =
-    typeof r["startAt"] === "string" || r["startAt"] instanceof Date
-      ? (r["startAt"] as string | Date)
-      : undefined;
-  const endAt =
-    typeof r["endAt"] === "string" || r["endAt"] instanceof Date
-      ? (r["endAt"] as string | Date)
-      : undefined;
+  const startAt = parseTimestamp(r["startAt"]);
+  const endAt = parseTimestamp(r["endAt"]);
 
   if (!id || !title) return null;
   return { id, title, speaker, startAt, endAt, users };
@@ -69,6 +75,7 @@ function categorizeRooms(rooms: RoomUI[]) {
 }
 
 export function RoomsControl() {
+  const navigate = useNavigate();
   const [tab, setTab] = useState<"live" | "waiting">("live");
   const [page, setPage] = useState(1);
   const [pageAnimating, setPageAnimating] = useState(false);
@@ -86,6 +93,11 @@ export function RoomsControl() {
     setLoading(true);
     setError(null);
     try {
+      try {
+        await invokeFunction("auto-end-live-chat", { method: "POST" });
+      } catch (err) {
+        console.warn("auto-end-live-chat failed", err);
+      }
       const data = await invokeFunction<unknown[]>("users-live-chat-rooms?status=all");
 
       const all = Array.isArray(data) ? data : [];
@@ -156,7 +168,7 @@ export function RoomsControl() {
   }, [page, totalPages]);
 
   function handleJoin(id: string) {
-    console.log("Ingressar em", id);
+    navigate(`/network?roomId=${encodeURIComponent(id)}`, { state: { roomId: id } });
   }
   function goPage(p: number) {
     setPage(Math.max(1, Math.min(totalPages, p)));

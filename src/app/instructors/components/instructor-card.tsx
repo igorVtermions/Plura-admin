@@ -68,8 +68,15 @@ export function InstructorCard({
   const hasAvatar =
     typeof instructor.avatarUrl === "string" && instructor.avatarUrl.trim().length > 0;
 
+  const handleCardClick = () => {
+    if (typeof onView === "function") onView(instructor.id);
+  };
+
   return (
-    <article className="relative flex h-[306px] w-full max-w-[362px] flex-col overflow-hidden rounded-[22px] border border-[#DDD1FF] bg-gradient-to-b from-[#F3EEFF] to-white">
+    <article
+      className="relative flex h-[306px] w-full max-w-[362px] flex-col overflow-hidden rounded-[22px] border border-[#DDD1FF] bg-gradient-to-b from-[#F3EEFF] to-white cursor-pointer"
+      onClick={handleCardClick}
+    >
       <div className="absolute inset-x-0 top-0 z-0 h-[72px] bg-[#A984FF]" />
 
       <div
@@ -105,7 +112,10 @@ export function InstructorCard({
             <div ref={menuRef} className="relative -mt-6">
               <button
                 type="button"
-                onClick={() => setMenuOpen((value) => !value)}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setMenuOpen((value) => !value);
+                }}
                 className="flex cursor-pointer h-8 w-8 items-center justify-center text-[#7A6B9E] transition-colors duration-150 hover:text-[#5A4D80] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#977CEC] focus-visible:ring-offset-2 focus-visible:ring-offset-white"
                 aria-haspopup="menu"
                 aria-expanded={menuOpen}
@@ -122,7 +132,8 @@ export function InstructorCard({
                   {hasView && (
                     <button
                       type="button"
-                      onClick={() => {
+                      onClick={(event) => {
+                        event.stopPropagation();
                         setMenuOpen(false);
                         onView?.(instructor.id);
                       }}
@@ -134,7 +145,8 @@ export function InstructorCard({
                   {hasEdit && (
                     <button
                       type="button"
-                      onClick={() => {
+                      onClick={(event) => {
+                        event.stopPropagation();
                         setMenuOpen(false);
                         onEdit?.(instructor.id);
                       }}
@@ -146,7 +158,8 @@ export function InstructorCard({
                   {hasDelete && (
                     <button
                       type="button"
-                      onClick={() => {
+                      onClick={(event) => {
+                        event.stopPropagation();
                         if (!pendingDelete) {
                           setMenuOpen(false);
                           setConfirmDelete(true);
@@ -172,7 +185,10 @@ export function InstructorCard({
         <div className="pt-4">
           <Button
             type="button"
-            onClick={() => onView?.(instructor.id)}
+            onClick={(event) => {
+              event.stopPropagation();
+              onView?.(instructor.id);
+            }}
             disabled={!hasView}
             className={cn(
               "h-11 w-full rounded-[14px] border border-white/40 bg-gradient-to-r from-[#8A6DE8] to-[#B59DFF] text-sm font-semibold text-white transition-transform duration-150 hover:-translate-y-0.5 hover:shadow-md",

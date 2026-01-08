@@ -5,7 +5,7 @@ import Link from "@/router/Link";
 import Image from "@/components/ui/Image";
 import { useRouter } from "@/lib/router";
 import { Button } from "@/components/ui/button";
-import { invokeFunction, supabase } from "@/services/api";
+import { invokeFunction, setClientToken, supabase } from "@/services/api";
 import Notifications from "./notifications";
 
 type HeaderProps = {
@@ -47,6 +47,7 @@ export function Header({ adminName = "Admin" }: HeaderProps) {
       if (supabase) {
         await supabase.auth.signOut();
       }
+      setClientToken(null);
     } catch (err) {
       console.error(err);
     } finally {

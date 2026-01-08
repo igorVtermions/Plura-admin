@@ -16,11 +16,13 @@ import {
   deleteInstructor,
   fetchInstructorFollowers,
   fetchInstructorProfile,
+  fetchTutorRoomHistory,
+  fetchTutorFollowStats,
 } from "@/services/tutor";
 import { INSTRUCTOR_STATUS_META } from "../components/profile/visuals";
 import type { InstructorCardData, InstructorProfile } from "@/types/tutor";
 
-const FOLLOWERS_PAGE_SIZE = 20;
+const FOLLOWERS_PAGE_SIZE = 5;
 
 export function InstructorProfilePage() {
   const { instructorId } = useParams();
@@ -57,70 +59,43 @@ export function InstructorProfilePage() {
           setProfile(null);
           return;
         }
-        // raw profile fetch removed (debug panel cleanup)
-        // try the new admin endpoint that returns grouped sessions (live/upcoming/finished)
+        // Load only finished rooms for this tutor profile.
         try {
-          const sessionsResp = await import("@/services/tutor").then((m) =>
-            m.fetchTutorSessionsAdmin(id),
-          );
-          // eslint-disable-next-line no-console
-          console.debug("instructor-profile: fetchTutorSessionsAdmin result:", sessionsResp);
-          if (sessionsResp) {
-            const mapped: import("@/types/tutor").InstructorProfileActivity[] = [];
-            const mapRoom = (
-              room: Record<string, unknown>,
-              kind: "live" | "upcoming" | "finished",
-            ) => {
-              const rid = (room.id ?? room.roomId ?? room._id ?? room.code) as any;
-              const title = (room.name ?? room.title ?? room.roomTitle ?? room.topic) as any;
-              const start = (room.startAt ?? room.startTime ?? room.date ?? room.beginAt) as any;
-              const end = (room.endAt ?? room.endTime ?? room.actualEndAt ?? room.finishAt) as any;
-              const stats = (room.stats ?? room) as Record<string, unknown> | undefined;
-              let participants: number | null = null;
-              if (stats) {
-                if (typeof stats.participantsCount === "number")
-                  participants = stats.participantsCount as number;
-                else if (typeof stats.totalParticipants === "number")
-                  participants = stats.totalParticipants as number;
-                else if (typeof stats.participants === "number")
-                  participants = stats.participants as number;
-                else if (typeof stats.viewers === "number") participants = stats.viewers as number;
-              }
+          const rooms = await fetchTutorRoomHistory({
+            tutorId: result.id,
+            page: 1,
+            limit: 12,
+          });
+          const mapped: import("@/types/tutor").InstructorProfileActivity[] = rooms
+            .filter((room) => room && typeof room === "object")
+            .map((room) => {
+              const r = room as Record<string, unknown>;
+              const rid = r.id ?? r.roomId ?? r.originalRoomId ?? r._id ?? r.code;
+              const title = r.title ?? r.name ?? r.roomTitle ?? r.topic;
+              const start = r.startAt ?? r.startTime ?? r.beginAt;
+              const end = r.actualEndAt ?? r.endAt ?? r.endTime ?? r.finishAt;
+              const participants =
+                typeof r.participantsCount === "number"
+                  ? r.participantsCount
+                  : typeof r.totalParticipants === "number"
+                  ? r.totalParticipants
+                  : null;
+
               return {
                 id: rid ? String(rid) : String(Math.random()),
-                title: typeof title === "string" ? title : String(title ?? "Sessão"),
+                title: typeof title === "string" ? title : String(title ?? "Sala"),
                 startTime: start ? String(start) : null,
                 endTime: end ? String(end) : null,
                 durationMinutes: null,
-                participantsCount: typeof participants === "number" ? participants : null,
-                isLive: kind === "live",
-                status: kind === "live" ? "live" : kind === "upcoming" ? "upcoming" : "finished",
+                participantsCount: participants,
+                isLive: false,
+                status: "finished",
                 roomId: rid ? String(rid) : null,
               } as import("@/types/tutor").InstructorProfileActivity;
-            };
+            });
 
-            const tutorSessions = sessionsResp.live.concat(
-              sessionsResp.upcoming,
-              sessionsResp.finished,
-            );
-            for (const r of sessionsResp.live) {
-              if (r && typeof r === "object")
-                mapped.push(mapRoom(r as Record<string, unknown>, "live"));
-            }
-            for (const r of sessionsResp.upcoming) {
-              if (r && typeof r === "object")
-                mapped.push(mapRoom(r as Record<string, unknown>, "upcoming"));
-            }
-            for (const r of sessionsResp.finished) {
-              if (r && typeof r === "object")
-                mapped.push(mapRoom(r as Record<string, unknown>, "finished"));
-            }
-
-            if (mapped.length > 0) {
-              result.liveSessions = mapped;
-              result.liveSessionsTotal = mapped.length;
-            }
-          }
+          result.liveSessions = mapped;
+          result.liveSessionsTotal = mapped.length;
         } catch (err) {
           // ignore
         }
@@ -166,14 +141,19 @@ export function InstructorProfilePage() {
 
     async function syncFollowersCount() {
       try {
-        const summary = await fetchInstructorFollowers(tutorId, {
-          page: 1,
-          perPage: 1,
-        });
+        const statsTotal = await fetchTutorFollowStats(tutorId);
         if (cancelled) return;
 
-        const total = typeof summary.total === "number" ? summary.total : summary.items.length;
-        if (!Number.isFinite(total)) return;
+        let total = statsTotal;
+        if (!Number.isFinite(total ?? NaN)) {
+          const summary = await fetchInstructorFollowers(tutorId, {
+            page: 1,
+            perPage: 1,
+          });
+          if (cancelled) return;
+          total = typeof summary.total === "number" ? summary.total : summary.items.length;
+        }
+        if (!Number.isFinite(total ?? NaN)) return;
 
         setProfile((prev) => {
           if (!prev || prev.id !== tutorId || prev.followersCount === total) {

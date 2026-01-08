@@ -111,8 +111,15 @@ export function UserCard({
     ? "bg-[#C53030] text-white hover:bg-[#A22727] disabled:opacity-60"
     : "bg-[#256740] text-white hover:bg-[#1F5A35] disabled:opacity-60";
 
+  const handleCardClick = () => {
+    if (typeof onViewProfile === "function") onViewProfile(user.id);
+  };
+
   return (
-    <article className="relative flex w-full max-w-[362px] flex-col overflow-hidden rounded-[22px] border border-transparent bg-white h-[282px]">
+    <article
+      className="relative flex w-full max-w-[362px] flex-col overflow-hidden rounded-[22px] border border-transparent bg-white h-[282px] cursor-pointer"
+      onClick={handleCardClick}
+    >
       <div
         className="absolute inset-x-0 top-0 z-0 h-14"
         style={{ backgroundColor: meta.headerColor }}
@@ -122,7 +129,10 @@ export function UserCard({
         <div className="relative">
           <button
             type="button"
-            onClick={() => setMenuOpen((open) => !open)}
+            onClick={(event) => {
+              event.stopPropagation();
+              setMenuOpen((open) => !open);
+            }}
             className="flex h-9 w-9 cursor-pointer items-center justify-center pt-2 text-current transition-transform duration-150 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#977CEC] focus-visible:ring-offset-1 focus-visible:ring-offset-white"
             style={{ color: meta.iconColor }}
             aria-haspopup="menu"
@@ -139,6 +149,11 @@ export function UserCard({
             >
               <button
                 type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setMenuOpen(false);
+                  onViewProfile?.(user.id);
+                }}
                 className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left hover:bg-[#F4F6FF]"
               >
                 Ver perfil do usuário
@@ -147,7 +162,10 @@ export function UserCard({
                 <button
                   type="button"
                   disabled={isBanDisabled}
-                  onClick={openBanConfirm}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    openBanConfirm();
+                  }}
                   className={cn(
                     "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[#C53030] hover:bg-[#FFF2F2]",
                     isBanDisabled && "cursor-not-allowed opacity-60 hover:bg-transparent",
@@ -160,7 +178,10 @@ export function UserCard({
                 <button
                   type="button"
                   disabled={isUnbanDisabled}
-                  onClick={openUnbanConfirm}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    openUnbanConfirm();
+                  }}
                   className={cn(
                     "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[#256740] hover:bg-[#E5F4ED]",
                     isUnbanDisabled && "cursor-not-allowed opacity-60 hover:bg-transparent",
@@ -221,7 +242,10 @@ export function UserCard({
               color: "#FFFFFF",
               borderColor: meta.buttonBorder,
             }}
-            onClick={() => onViewProfile?.(user.id)}
+            onClick={(event) => {
+              event.stopPropagation();
+              onViewProfile?.(user.id);
+            }}
           >
             Ver perfil
           </Button>

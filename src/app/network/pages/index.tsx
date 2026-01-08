@@ -1,4 +1,4 @@
-import Image from "@/components/ui/Image";
+﻿import Image from "@/components/ui/Image";
 import { Input } from "@/components/ui/input";
 import {
 	Select,
@@ -8,49 +8,24 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Search } from "lucide-react";
-import { useMemo, useState, useEffect, useCallback } from "react";
-import { ChatCard } from "../components/chat-card";
+import { useMemo, useState, useEffect, useCallback, useRef } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { LiveRoomCard } from "@/app/home/components/live-room-card";
+import { SoonRoomCard } from "@/app/home/components/soon-room-card";
 import { Pagination } from "../components/pagination";
 import { ChatMessage, ChatView, Participant } from "../components/chat-view";
+import { ModalDetail } from "../components/modal-detail";
 import {
 	fetchLiveChatRooms,
 	LiveChatRoom,
   LiveRoomStatus,
+  fetchLiveChatRoomParticipants,
+  fetchLiveChatRoomMessages,
+  sendLiveChatRoomMessage,
+  LiveChatMessage,
+  joinLiveChatRoom,
+  leaveLiveChatRoom,
 } from "@/services/network";
-
-const participants: Participant[] = [
-	{ id: "1", name: "Ana Clara", avatarUrl: "/UserCircle.svg" },
-	{ id: "2", name: "Daniel Souza", avatarUrl: "/UserCircle.svg" },
-	{ id: "3", name: "Juliana Freitas", avatarUrl: "/UserCircle.svg" },
-	{ id: "4", name: "Paulo Vinícius", avatarUrl: "/UserCircle.svg" },
-	{ id: "5", name: "Carla Mota", avatarUrl: "/UserCircle.svg" },
-];
-
-const createInitialMessages = (room: LiveChatRoom): ChatMessage[] => [
-	{
-		id: `${room.title}-welcome`,
-		senderName: room.instructor.name,
-		content: `Bem-vindo à sala ${room.title}! Fique à vontade para compartilhar suas experiências.`,
-		time: "09:41",
-		type: "incoming",
-	},
-	{
-		id: `${room.title}-participant`,
-		senderName: "Ana Clara",
-		content:
-			"Obrigado por abrir o tema hoje. Tenho sentido muita ansiedade antes das reuniões.",
-		time: "09:46",
-		type: "incoming",
-	},
-	{
-		id: `${room.title}-you`,
-		senderName: "Você",
-		content:
-			"Que bom poder fazer parte! Vou compartilhar o que vem me ajudando nos últimos dias.",
-		time: "09:48",
-		type: "outgoing",
-	},
-];
 
 const PAGE_SIZE = 6;
 
@@ -105,6 +80,7 @@ const useNetworkPage = () => {
   }, [loadRooms, statusFilter]);
 
   return {
+    rooms,
     visibleRooms,
     loading,
     error,
@@ -127,7 +103,7 @@ const NoRoom = () => {
 			</div>
 			<h2 className="mt-6 text-2xl font-semibold">Nenhuma sala encontrada</h2>
 			<p className="mt-2 text-[#6C5CAB]">
-				Não há salas de chat ao vivo disponíveis no momento.
+				NÃ£o hÃ¡ salas de chat ao vivo disponÃ­veis no momento.
 			</p>
 		</div>
 	);
@@ -140,6 +116,7 @@ interface ContentRoomsProps {
   totalPages: number;
   onPageChange: (page: number) => void;
   onJoinRoom: (room: LiveChatRoom) => void;
+  statusFilter: LiveRoomStatus;
 }
 
 const ContentRooms = ({
@@ -149,17 +126,57 @@ const ContentRooms = ({
   totalPages,
   onPageChange,
   onJoinRoom,
+  statusFilter,
 }: ContentRoomsProps) => {
   return (
     <>
       <div className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
-        {visibleRooms.map((room) => (
-          <ChatCard
-            key={room.id}
-            room={room}
-            onJoin={() => onJoinRoom(room)}
-          />
-        ))}
+        {visibleRooms.map((room) => {
+          const startAt = room.startAt ?? undefined;
+          const endAt = room.endAt ?? undefined;
+          const host = room.instructor.name;
+          const now = new Date();
+          const startDate = startAt ? new Date(startAt) : null;
+          const endDate = endAt ? new Date(endAt) : null;
+          const hasValidDates =
+            startDate && endDate && !Number.isNaN(startDate.getTime()) && !Number.isNaN(endDate.getTime());
+          const isLive = hasValidDates
+            ? now.getTime() >= startDate!.getTime() && now.getTime() <= endDate!.getTime()
+            : statusFilter === "live";
+          const isSoon = hasValidDates ? now.getTime() < startDate!.getTime() : statusFilter === "soon";
+
+          if (isLive) {
+            return (
+              <LiveRoomCard
+                key={room.id}
+                id={room.id}
+                startAt={startAt}
+                endAt={endAt}
+                topic={room.title}
+                host={host}
+                liveUsers={room.liveUsers}
+                onJoin={() => onJoinRoom(room)}
+              />
+            );
+          }
+
+          if (isSoon) {
+            return (
+              <SoonRoomCard
+                key={room.id}
+                dateLabel={undefined}
+                startAt={startAt}
+                endAt={endAt}
+                topic={room.title}
+                host={host}
+                showSlash={false}
+                onToggleReminder={() => {}}
+              />
+            );
+          }
+
+          return null;
+        })}
       </div>
       {showPagination && (
         <Pagination
@@ -173,7 +190,11 @@ const ContentRooms = ({
 };
 
 export function NetworkPage() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const pendingRoomIdRef = useRef<string | null>(null);
   const {
+    rooms,
     visibleRooms,
     loading,
     error,
@@ -187,7 +208,9 @@ export function NetworkPage() {
     reload,
   } = useNetworkPage();
   const [selectedRoom, setSelectedRoom] = useState<LiveChatRoom | null>(null);
-  const [roomMessages, setRoomMessages] = useState<Record<string, ChatMessage[]>>({});
+  const [roomMessages, setRoomMessages] = useState<Record<string, LiveChatMessage[]>>({});
+  const [roomParticipants, setRoomParticipants] = useState<Record<string, Participant[]>>({});
+  const [showRoomDetails, setShowRoomDetails] = useState(false);
 
   useEffect(() => {
     function handleSessionCreated() {
@@ -197,61 +220,194 @@ export function NetworkPage() {
     return () => window.removeEventListener("session:created", handleSessionCreated as EventListener);
   }, [reload]);
 
-  const handleJoinRoom = (room: LiveChatRoom) => {
+  const handleJoinRoom = useCallback((room: LiveChatRoom) => {
     setSelectedRoom(room);
-    setRoomMessages((prev) => {
-      if (prev[room.title]) {
-        return prev;
+    void (async () => {
+      try {
+        await joinLiveChatRoom(room.id);
+        const [participantsList, messagesList] = await Promise.all([
+          fetchLiveChatRoomParticipants(room.id),
+          fetchLiveChatRoomMessages(room.id),
+        ]);
+        setRoomParticipants((prev) => ({
+          ...prev,
+          [room.id]: participantsList,
+        }));
+        setRoomMessages((prev) => ({
+          ...prev,
+          [room.id]: messagesList,
+        }));
+      } catch {
+        setRoomParticipants((prev) => ({ ...prev, [room.id]: [] }));
+        setRoomMessages((prev) => ({ ...prev, [room.id]: [] }));
       }
-      return {
-        ...prev,
-        [room.title]: createInitialMessages(room),
-      };
-    });
-  };
+    })();
+  }, []);
 
-  const handleSendMessage = (newMessage: string) => {
+  useEffect(() => {
+    const state = location.state as { roomId?: string } | null;
+    const params = new URLSearchParams(location.search);
+    const queryRoomId = params.get("roomId");
+    if (queryRoomId) {
+      pendingRoomIdRef.current = queryRoomId;
+      return;
+    }
+    if (state?.roomId) {
+      pendingRoomIdRef.current = String(state.roomId);
+    }
+  }, [location.state, location.search]);
+
+  useEffect(() => {
+    if (!pendingRoomIdRef.current || selectedRoom) return;
+    const room = rooms.find((item) => item.id === pendingRoomIdRef.current);
+    if (!room) return;
+    handleJoinRoom(room);
+    pendingRoomIdRef.current = null;
+    navigate("/network", { replace: true, state: null });
+  }, [rooms, selectedRoom, handleJoinRoom, navigate]);
+
+    useEffect(() => {
+      if (!selectedRoom?.id) return;
+      const roomId = selectedRoom.id;
+      let isMounted = true;
+
+    const refreshMessages = async () => {
+      try {
+        const messagesList = await fetchLiveChatRoomMessages(roomId);
+        if (!isMounted) return;
+        setRoomMessages((prev) => ({
+          ...prev,
+          [roomId]: messagesList,
+        }));
+      } catch {
+        // ignore polling errors
+      }
+    };
+
+    const intervalId = window.setInterval(() => {
+      void refreshMessages();
+    }, 2500);
+
+      return () => {
+        isMounted = false;
+        window.clearInterval(intervalId);
+      };
+    }, [selectedRoom?.id]);
+
+    useEffect(() => {
+      if (!selectedRoom?.id) return;
+      const roomId = selectedRoom.id;
+      let isMounted = true;
+
+      const refreshParticipants = async () => {
+        try {
+          const participantsList = await fetchLiveChatRoomParticipants(roomId);
+          if (!isMounted) return;
+          setRoomParticipants((prev) => ({
+            ...prev,
+            [roomId]: participantsList,
+          }));
+        } catch {
+          // ignore polling errors
+        }
+      };
+
+      const intervalId = window.setInterval(() => {
+        void refreshParticipants();
+      }, 4000);
+
+      return () => {
+        isMounted = false;
+        window.clearInterval(intervalId);
+      };
+    }, [selectedRoom?.id]);
+
+  const handleSendMessage = async (newMessage: string) => {
     if (!selectedRoom) return;
+    try {
+      await joinLiveChatRoom(selectedRoom.id);
+    } catch {
+      // ignore join errors before sending
+    }
     const timestamp = new Date().toLocaleTimeString("pt-BR", {
       hour: "2-digit",
       minute: "2-digit",
     });
 
     setRoomMessages((prev) => {
-      const existingMessages = prev[selectedRoom.title] ?? [];
-      const outgoingMessage: ChatMessage = {
-        id: `${selectedRoom.title}-${Date.now()}`,
-        senderName: "Você",
+      const existingMessages = prev[selectedRoom.id] ?? [];
+      const outgoingMessage: LiveChatMessage = {
+        id: `${selectedRoom.id}-${Date.now()}`,
+        senderName: "VocÃª",
         content: newMessage,
         time: timestamp,
         type: "outgoing",
+        isAdmin: true,
       };
 
       return {
         ...prev,
-        [selectedRoom.title]: [...existingMessages, outgoingMessage],
+        [selectedRoom.id]: [...existingMessages, outgoingMessage],
       };
     });
+
+    try {
+      await sendLiveChatRoomMessage(selectedRoom.id, newMessage);
+    } catch {
+      // ignore send errors for now
+    }
   };
 
-  const selectedRoomMessages = selectedRoom ? roomMessages[selectedRoom.title] ?? [] : [];
+  const selectedRoomMessages = selectedRoom ? roomMessages[selectedRoom.id] ?? [] : [];
+  const selectedRoomParticipants = selectedRoom ? roomParticipants[selectedRoom.id] ?? [] : [];
+  const selectedRoomOnlineUsers = useMemo(() => {
+    if (!selectedRoomParticipants.length) return [];
+    return selectedRoomParticipants.filter((participant) => {
+      const role = (participant.role || "").toLowerCase();
+      return role !== "admin" && role !== "tutor";
+    });
+  }, [selectedRoomParticipants]);
+  const roomDetailUsers = useMemo(() => {
+    if (!selectedRoomOnlineUsers.length) return [];
+    return selectedRoomOnlineUsers.map((participant) => ({
+      name: participant.name,
+      handle: `@${participant.name.toLowerCase().replace(/\s+/g, ".")}`,
+      avatar: participant.avatarUrl,
+    }));
+  }, [selectedRoomOnlineUsers]);
 
   return (
     <div className="min-h-screen bg-white px-6 py-12">
       {selectedRoom ? (
-        <ChatView
-          roomTitle={selectedRoom.title}
-          roomSubtitle="Sala de acompanhamento"
-          owner={{
-            name: selectedRoom.instructor.name,
-            avatarUrl: "/UserCircle.svg",
-            subtitle: "Psicólogo responsável",
-          }}
-          participants={participants}
-          messages={selectedRoomMessages}
-          onBack={() => setSelectedRoom(null)}
-          onSendMessage={handleSendMessage}
-        />
+        <>
+          <ChatView
+            roomTitle={selectedRoom.title}
+            roomSubtitle="Sala de acompanhamento"
+            roomId={selectedRoom.id}
+            owner={{
+              name: selectedRoom.instructor.name,
+              avatarUrl: "/UserCircle.svg",
+              subtitle: selectedRoom.instructor.role ?? "Instrutor responsÃ¡vel",
+            }}
+            participants={selectedRoomOnlineUsers}
+            messages={selectedRoomMessages as ChatMessage[]}
+            onBack={() => {
+              void leaveLiveChatRoom(selectedRoom.id);
+              setSelectedRoom(null);
+            }}
+            onMoreOptions={() => setShowRoomDetails(true)}
+            onSendMessage={handleSendMessage}
+          />
+          <ModalDetail
+            open={showRoomDetails}
+            onClose={() => setShowRoomDetails(false)}
+            about={selectedRoom.description ?? "Sem descrição informada."}
+            ageRange="Sem dados"
+            audience="Sem dados"
+            onlineCount={selectedRoomOnlineUsers.length}
+            users={roomDetailUsers}
+          />
+        </>
       ) : (
         <>
           <div className="space-y-1">
@@ -297,6 +453,7 @@ export function NetworkPage() {
                   totalPages={totalPages}
                   onPageChange={onPageChange}
                   onJoinRoom={handleJoinRoom}
+                  statusFilter={statusFilter}
                 />
               ) : (
                 <NoRoom />
@@ -308,3 +465,8 @@ export function NetworkPage() {
     </div>
   );
 }
+
+
+
+
+

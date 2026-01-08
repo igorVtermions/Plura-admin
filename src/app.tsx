@@ -10,8 +10,10 @@ import { HomePage } from "@/app/home/pages/home-page";
 import { InstructorProfilePage } from "@/app/instructors/pages/instructor-profile-page";
 import { InstructorsPage } from "@/app/instructors/pages/instructors-page";
 import { NotFoundPage } from "@/app/not-found/pages";
+import { RoomHistoryPage } from "@/app/rooms/pages/room-history-page";
 import { SupportChatPage } from "@/app/support/pages/[id]/support-chat-page";
 import { SupportPage } from "@/app/support/pages";
+import { SupportTicketPage } from "@/app/support/pages/ticket";
 import { UserProfilePage } from "@/app/users/pages/user-profile-page";
 import { UsersPage } from "@/app/users/pages/users-page";
 import { Toaster } from "react-hot-toast";
@@ -51,6 +53,7 @@ export default function App() {
                 <Route path="/register" element={<RegisterPage />} />
                 <Route path="/support" element={<SupportPage />} />
                 <Route path="/support/chat/:id" element={<SupportChatPage />} />
+                <Route path="/support/ticket/:id" element={<SupportTicketPage />} />
                 <Route path="/forgot-password" element={<ForgotPasswordPage />} />
                 <Route path="/verify" element={<VerifyPage />} />
                 <Route path="/users" element={<UsersPage />} />
@@ -59,6 +62,7 @@ export default function App() {
                 <Route path="/instructors/:instructorId" element={<InstructorProfilePage />} />
                 <Route path="/network" element={<NetworkPage />} />
                 <Route path="/metrics" element={<MetricsPage />} />
+                <Route path="/rooms/history/:historyId" element={<RoomHistoryPage />} />
                 <Route
                   path="*"
                   element={
