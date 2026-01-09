@@ -20,6 +20,7 @@ import { Toaster } from "react-hot-toast";
 import { Route, Routes, useLocation } from "react-router-dom";
 import { MetricsPage } from "./app/metrics/pages";
 import { NetworkPage } from "./app/network/pages";
+import { ProtectedRoute } from "@/app/auth/components/protected-route";
 
 export default function App() {
   const { pathname } = useLocation();
@@ -49,20 +50,24 @@ export default function App() {
               <Routes>
                 <Route path="/" element={<LoginPage />} />
                 <Route path="/login" element={<LoginPage />} />
-                <Route path="/home" element={<HomePage />} />
                 <Route path="/register" element={<RegisterPage />} />
-                <Route path="/support" element={<SupportPage />} />
-                <Route path="/support/chat/:id" element={<SupportChatPage />} />
-                <Route path="/support/ticket/:id" element={<SupportTicketPage />} />
                 <Route path="/forgot-password" element={<ForgotPasswordPage />} />
                 <Route path="/verify" element={<VerifyPage />} />
-                <Route path="/users" element={<UsersPage />} />
-                <Route path="/users/:userId" element={<UserProfilePage />} />
-                <Route path="/instructors" element={<InstructorsPage />} />
-                <Route path="/instructors/:instructorId" element={<InstructorProfilePage />} />
-                <Route path="/network" element={<NetworkPage />} />
-                <Route path="/metrics" element={<MetricsPage />} />
-                <Route path="/rooms/history/:historyId" element={<RoomHistoryPage />} />
+
+                <Route element={<ProtectedRoute />}>
+                  <Route path="/home" element={<HomePage />} />
+                  <Route path="/support" element={<SupportPage />} />
+                  <Route path="/support/chat/:id" element={<SupportChatPage />} />
+                  <Route path="/support/ticket/:id" element={<SupportTicketPage />} />
+                  <Route path="/users" element={<UsersPage />} />
+                  <Route path="/users/:userId" element={<UserProfilePage />} />
+                  <Route path="/instructors" element={<InstructorsPage />} />
+                  <Route path="/instructors/:instructorId" element={<InstructorProfilePage />} />
+                  <Route path="/network" element={<NetworkPage />} />
+                  <Route path="/metrics" element={<MetricsPage />} />
+                  <Route path="/rooms/history/:historyId" element={<RoomHistoryPage />} />
+                </Route>
+
                 <Route
                   path="*"
                   element={
