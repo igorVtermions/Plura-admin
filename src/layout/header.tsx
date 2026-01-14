@@ -28,7 +28,7 @@ export function Header({ adminName = "Admin" }: HeaderProps) {
           fullName?: string;
           username?: string;
           email?: string;
-        }>("users-me");
+        }>("admin-me");
         const display =
           admin?.name ?? admin?.fullName ?? admin?.username ?? admin?.email ?? "Administrador";
         if (mounted) setName(String(display));

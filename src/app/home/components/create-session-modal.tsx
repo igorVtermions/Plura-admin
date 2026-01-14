@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useEffect, useRef, useState } from "react";
 import Modal from "@/components/ui/Modal";
@@ -13,13 +13,13 @@ import toast from "react-hot-toast";
 
 type Tutor = { id: string | number; name: string };
 const topicsMap = {
-  depressao: "DepressÃ£o",
+  depressao: "Depressão",
   alcoolismo: "Alcoolismo",
   autismo: "Autismo",
   drogas: "Drogas",
   ansiedade: "Ansiedade",
   estresse: "Estresse",
-  desanimo: "DesÃ¢nimo",
+  desanimo: "Desânimo",
   outros: "Outros",
 } as const;
 
@@ -182,9 +182,9 @@ export function CreateSessionModal({ open, onClose, onContinue, tutorOptions }: 
   async function handleContinue() {
     if (step === 1) {
       const missing: string[] = [];
-      if (!title.trim()) missing.push("TÃ­tulo da sala");
-      if (!startAt) missing.push("Data e hora de inÃ­cio");
-      if (!endAt) missing.push("Data e hora de tÃ©rmino");
+      if (!title.trim()) missing.push("Título da sala");
+      if (!startAt) missing.push("Data e hora de início");
+      if (!endAt) missing.push("Data e hora de término");
       if (!selectedTutor) missing.push("Instrutor");
       if (missing.length) {
         toast.error(`Preencha: ${missing.join(", ")}`);
@@ -192,15 +192,15 @@ export function CreateSessionModal({ open, onClose, onContinue, tutorOptions }: 
       }
       const now = new Date();
       if (startAt && startAt <= now) {
-        toast.error("A data/hora de inÃ­cio deve estar no futuro.");
+        toast.error("A data/hora de início deve estar no futuro.");
         return;
       }
       if (endAt && endAt <= now) {
-        toast.error("A data/hora de tÃ©rmino deve estar no futuro.");
+        toast.error("A data/hora de término deve estar no futuro.");
         return;
       }
       if (startAt && endAt && startAt >= endAt) {
-        toast.error("O inÃ­cio deve ser antes do tÃ©rmino.");
+        toast.error("O início deve ser antes do término.");
         return;
       }
       setStep(2);
@@ -208,7 +208,7 @@ export function CreateSessionModal({ open, onClose, onContinue, tutorOptions }: 
     }
     if (step === 2) {
       if (!selectedTopics.length) {
-        toast.error("Escolha ao menos um tÃ³pico.");
+        toast.error("Escolha ao menos um tópico.");
         return;
       }
       setStep(3);
@@ -236,7 +236,7 @@ export function CreateSessionModal({ open, onClose, onContinue, tutorOptions }: 
         method: "POST",
         body,
       });
-      toast.success("SessÃ£o criada com sucesso.");
+      toast.success("Sessão criada com sucesso.");
       try {
         window.dispatchEvent(new CustomEvent("session:created", { detail: created }));
       } catch {
@@ -246,7 +246,7 @@ export function CreateSessionModal({ open, onClose, onContinue, tutorOptions }: 
       clearAll();
       onClose();
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Erro ao criar sessÃ£o";
+      const message = err instanceof Error ? err.message : "Erro ao criar sessão";
       toast.error(message);
     } finally {
       setLoading(false);
@@ -289,7 +289,7 @@ export function CreateSessionModal({ open, onClose, onContinue, tutorOptions }: 
         className="w-full px-4 py-2 rounded-md text-white transition-transform duration-150 ease-in-out hover:scale-105 hover:shadow-md disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-[#977CEC]"
         style={{ background: "#977CEC" }}
       >
-        {step === 3 ? (loading ? "Criando..." : "Criar sessÃ£o") : "Continuar"}
+        {step === 3 ? (loading ? "Criando..." : "Criar sessão") : "Continuar"}
       </button>
     </div>
   );
@@ -396,13 +396,13 @@ export function CreateSessionModal({ open, onClose, onContinue, tutorOptions }: 
     <Modal
       open={open}
       onClose={handleCancel}
-      title="Criar sessÃ£o"
+      title="Criar sessão"
       subtitle={
         step === 2
-          ? "Atribua os tÃ³picos que serÃ£o assunto dessa sessÃ£o"
+          ? "Atribua os tópicos que serão assunto dessa sessão"
           : step === 3
           ? "Confirme as suas escolhas anteriores"
-          : "Configure as informaÃ§Ãµes da sala"
+          : "Configure as informações da sala"
       }
       top={<ProgressBar total={3} current={step} />}
       footer={step === 1 ? footerStep1 : footerStepNext}

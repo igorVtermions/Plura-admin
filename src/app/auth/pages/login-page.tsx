@@ -1,4 +1,4 @@
-﻿import React from "react";
+import React from "react";
 import {
   Card,
   CardContent,
@@ -9,7 +9,6 @@ import {
 } from "@/components/ui/card";
 import { Logo } from "@/components/brand/logo";
 import { LoginForm } from "@/app/auth/components/login-form";
-import Link from "@/router/Link";
 import { SuccessBanner } from "@/app/home/components/success-banner";
 import { useRouter } from "@/lib/router";
 import { getClientToken } from "@/services/api";
@@ -37,12 +36,11 @@ export function LoginPage() {
           <LoginForm />
         </CardContent>
         <CardFooter className="flex-col gap-2 items-center">
-          <p className="text-sm text-muted-foreground">Não tem conta?</p>
-          <Link href="/register" className="text-sm font-medium text-primary hover:underline">
-            Registrar-se
-          </Link>
         </CardFooter>
       </Card>
     </main>
   );
 }
+
+
+

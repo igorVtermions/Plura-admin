@@ -53,34 +53,17 @@ export function RegisterForm() {
     try {
       setLoading(true);
 
-      const res = await invokeFunction<{ id?: number; adminId?: number; admin?: { id: number } }>(
-        "register",
-        {
-          method: "POST",
-          body: {
-            name,
-            email,
-            password: pw,
-            confirmPassword,
-          },
+      await invokeFunction("admin-register", {
+        method: "POST",
+        body: {
+          name,
+          email,
+          password: pw,
+          confirmPassword,
         },
-      );
+      });
 
-      const rawId = res.id ?? res.adminId ?? res.admin?.id;
-      const adminId = rawId != null ? Number(rawId) : undefined;
-
-      try {
-        if (!Number.isNaN(adminId)) {
-          await invokeFunction("send-pin", { method: "POST", body: { adminId, via: "email" } });
-        } else {
-          await invokeFunction("send-pin", { method: "POST", body: { email, via: "email" } });
-        }
-      } catch {}
-
-      const q = new URLSearchParams();
-      q.set("email", email);
-      if (!Number.isNaN(adminId)) q.set("adminId", String(adminId));
-      router.push(`/verify?${q.toString()}`);
+      router.push("/login?success=registered");
     } catch (err: unknown) {
       let message = "Erro ao criar conta";
       if (err instanceof Error) {

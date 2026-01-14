@@ -39,7 +39,7 @@ export function ProtectedRoute() {
       }
 
       try {
-        await invokeFunction("users-me", { method: "GET" });
+        await invokeFunction("admin-me", { method: "GET" });
         if (active) setStatus("authorized");
       } catch (error) {
         console.warn("Protegido: sessao invalida ou expirada.", error);
