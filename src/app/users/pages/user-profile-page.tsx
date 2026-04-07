@@ -455,17 +455,34 @@ export function UserProfilePage() {
   };
 
   const fetchFollowing = async (uid: string, page = 1) => {
-    const [usersResult, tutorsResult] = await Promise.all([
+    const [usersResult, tutorsResult] = await Promise.allSettled([
       apiFetchFollowing(uid, { page, perPage: FOLLOW_PAGE_SIZE }),
       fetchTutorFollowing(uid, { page, perPage: FOLLOW_PAGE_SIZE }),
     ]);
-    const mergedItems = [...usersResult.items, ...tutorsResult.items];
-    const total = (usersResult.total ?? 0) + (tutorsResult.total ?? 0);
-    const hasMore = usersResult.hasMore || tutorsResult.hasMore;
+
+    const usersData = usersResult.status === "fulfilled"
+      ? usersResult.value
+      : { items: [], total: 0, pageSize: FOLLOW_PAGE_SIZE, hasMore: false };
+    const tutorsData = tutorsResult.status === "fulfilled"
+      ? tutorsResult.value
+      : { items: [], total: 0, pageSize: FOLLOW_PAGE_SIZE, hasMore: false };
+
+    const mergedItems = [...usersData.items, ...tutorsData.items];
+    const total = (usersData.total ?? 0) + (tutorsData.total ?? 0);
+    const hasMore = usersData.hasMore || tutorsData.hasMore;
+
+    if (
+      usersResult.status === "rejected" &&
+      tutorsResult.status === "rejected" &&
+      mergedItems.length === 0
+    ) {
+      throw usersResult.reason ?? tutorsResult.reason;
+    }
+
     return {
       items: mergedItems,
       total: Number.isFinite(total) ? total : undefined,
-      pageSize: Math.max(usersResult.pageSize, tutorsResult.pageSize),
+      pageSize: Math.max(usersData.pageSize, tutorsData.pageSize),
       hasMore,
     };
   };

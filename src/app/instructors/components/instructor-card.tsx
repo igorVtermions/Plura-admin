@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { MoreVertical, User as UserIcon } from "lucide-react";
+import { AlertTriangle, MoreVertical, User as UserIcon } from "lucide-react";
 import Image from "@/components/ui/Image";
 import { Button } from "@/components/ui/button";
 import Modal from "@/components/ui/Modal";
@@ -69,6 +69,7 @@ export function InstructorCard({
     typeof instructor.avatarUrl === "string" && instructor.avatarUrl.trim().length > 0;
 
   const handleCardClick = () => {
+    if (menuOpen || confirmDelete || pendingDelete) return;
     if (typeof onView === "function") onView(instructor.id);
   };
 
@@ -209,14 +210,20 @@ export function InstructorCard({
           <div className="flex justify-end gap-3">
             <Button
               variant="outline"
-              onClick={() => setConfirmDelete(false)}
+              onClick={(event) => {
+                event.stopPropagation();
+                setConfirmDelete(false);
+              }}
               className="border-[#D0D9F1] text-[#1F2A44] hover:bg-[#F4F6FF]"
             >
               Cancelar
             </Button>
             <Button
               type="button"
-              onClick={handleDelete}
+              onClick={(event) => {
+                event.stopPropagation();
+                void handleDelete();
+              }}
               disabled={!hasDelete || pendingDelete}
               className="bg-[#C53030] text-white hover:bg-[#A22727] disabled:opacity-60"
             >
@@ -228,6 +235,18 @@ export function InstructorCard({
         <p className="text-sm text-[#5A6480]">
           Essa ação removerá o acesso do instrutor e não poderá ser desfeita.
         </p>
+        <div className="mt-4 rounded-xl border border-[#F6B5B5] bg-[#FFF4F4] p-4">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="mt-0.5 h-5 w-5 text-[#C53030]" />
+            <div>
+              <p className="text-sm font-semibold text-[#9B1C1C]">Atenção ao impacto nas salas</p>
+              <p className="mt-1 text-sm leading-relaxed text-[#7A2330]">
+                Se houver salas de live chat ao vivo ou em espera vinculadas a este instrutor,
+                elas poderão ser encerradas durante a exclusão.
+              </p>
+            </div>
+          </div>
+        </div>
       </Modal>
     </article>
   );

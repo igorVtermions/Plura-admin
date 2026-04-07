@@ -1,4 +1,4 @@
-import { invokeFunction } from "@/services/api";
+import api, { invokeFunction } from "@/services/api";
 import type {
   BanUserPayload,
   BanUserResponse,
@@ -382,49 +382,142 @@ export async function fetchFollowers(
   userId: string,
   params?: FollowParams,
 ): Promise<FollowListResult> {
-  const functionPath = buildFollowQuery("user-follow", {
+  const functionPath = buildFollowQuery("admin-user-follow", {
     userId,
-    direction: "followers",
+    action: "get-followers",
     page: params?.page,
     perPage: params?.perPage,
   });
-  const response = await invokeFunction<unknown>(functionPath, {
-    method: "GET",
-  });
-  return mapFollowResponse(response, "followers", params);
+
+  try {
+    const response = await invokeFunction<unknown>(functionPath, {
+      method: "GET",
+    });
+    return mapFollowResponse(response, "followers", params);
+  } catch (error) {
+    console.warn("admin-user-follow (followers) failed, trying legacy user-follow endpoint", error);
+    try {
+      const legacyFnPath = buildFollowQuery("user-follow", {
+        userId,
+        action: "get-followers",
+        page: params?.page,
+        perPage: params?.perPage,
+      });
+      const legacyResponse = await invokeFunction<unknown>(legacyFnPath, { method: "GET" });
+      return mapFollowResponse(legacyResponse, "followers", params);
+    } catch {
+      // continue to REST fallback
+    }
+
+    try {
+      const response = await api.get(`/users/${encodeURIComponent(String(userId))}/followers`, {
+        params: {
+          page: params?.page,
+          perPage: params?.perPage,
+        },
+      });
+      return normalizeListPayload(response?.data, params, ["followers", "items", "data"]);
+    } catch (legacyError) {
+      console.warn("legacy followers endpoint failed", legacyError);
+      return {
+        items: [],
+        total: 0,
+        pageSize: params?.perPage ?? FOLLOW_DEFAULT_PAGE_SIZE,
+        hasMore: false,
+      };
+    }
+  }
 }
 
 export async function fetchFollowing(
   userId: string,
   params?: FollowParams,
 ): Promise<FollowListResult> {
-  const functionPath = buildFollowQuery("user-follow", {
+  const functionPath = buildFollowQuery("admin-user-follow", {
     userId,
-    direction: "following",
+    action: "get-following",
     page: params?.page,
     perPage: params?.perPage,
   });
-  const response = await invokeFunction<unknown>(functionPath, {
-    method: "GET",
-  });
-  const primary = mapFollowResponse(response, "following", params);
-  if (primary.items.length > 0) return primary;
-  const fallback = mapFollowResponse(response, "followers", params);
-  return fallback.items.length > 0 ? fallback : primary;
+  try {
+    const response = await invokeFunction<unknown>(functionPath, {
+      method: "GET",
+    });
+    const primary = mapFollowResponse(response, "following", params);
+    if (primary.items.length > 0) return primary;
+    const fallback = mapFollowResponse(response, "followers", params);
+    return fallback.items.length > 0 ? fallback : primary;
+  } catch (error) {
+    console.warn("admin-user-follow (following) failed, trying legacy user-follow endpoint", error);
+    try {
+      const legacyFnPath = buildFollowQuery("user-follow", {
+        userId,
+        action: "get-following",
+        page: params?.page,
+        perPage: params?.perPage,
+      });
+      const legacyResponse = await invokeFunction<unknown>(legacyFnPath, { method: "GET" });
+      const primary = mapFollowResponse(legacyResponse, "following", params);
+      if (primary.items.length > 0) return primary;
+      const fallback = mapFollowResponse(legacyResponse, "followers", params);
+      if (fallback.items.length > 0) return fallback;
+    } catch {
+      // continue to REST fallback
+    }
+
+    try {
+      const response = await api.get(`/users/${encodeURIComponent(String(userId))}/following`, {
+        params: {
+          page: params?.page,
+          perPage: params?.perPage,
+        },
+      });
+      return normalizeListPayload(response?.data, params, ["following", "items", "data"]);
+    } catch (legacyError) {
+      console.warn("legacy following endpoint failed", legacyError);
+      return {
+        items: [],
+        total: 0,
+        pageSize: params?.perPage ?? FOLLOW_DEFAULT_PAGE_SIZE,
+        hasMore: false,
+      };
+    }
+  }
 }
 
 export async function fetchTutorFollowing(
   userId: string,
   params?: FollowParams,
 ): Promise<FollowListResult> {
-  const functionPath = buildFollowQuery("user-tutor-follow", {
-    action: "get-following",
+  const functionPath = buildFollowQuery("admin-user-tutor-follow", {
     userId,
     page: params?.page,
     perPage: params?.perPage,
   });
-  const response = await invokeFunction<unknown>(functionPath, { method: "GET" });
-  return normalizeListPayload(response, params, ["following", "items", "data"]);
+  try {
+    const response = await invokeFunction<unknown>(functionPath, { method: "GET" });
+    return normalizeListPayload(response, params, ["following", "items", "data"]);
+  } catch (error) {
+    console.warn("admin-user-tutor-follow failed, trying legacy user-tutor-follow", error);
+    try {
+      const legacyPath = buildFollowQuery("user-tutor-follow", {
+        action: "get-following",
+        userId,
+        page: params?.page,
+        perPage: params?.perPage,
+      });
+      const response = await invokeFunction<unknown>(legacyPath, { method: "GET" });
+      return normalizeListPayload(response, params, ["following", "items", "data"]);
+    } catch (legacyError) {
+      console.warn("user-tutor-follow failed", legacyError);
+      return {
+        items: [],
+        total: 0,
+        pageSize: params?.perPage ?? FOLLOW_DEFAULT_PAGE_SIZE,
+        hasMore: false,
+      };
+    }
+  }
 }
 
 export type FollowStatsResult = {

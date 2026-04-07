@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import Modal from "@/components/ui/Modal";
@@ -333,6 +333,18 @@ export function InstructorProfilePage() {
         <p className="text-sm text-[#5A6480]">
           Essa ação removerá o acesso do instrutor e não poderá ser desfeita.
         </p>
+        <div className="mt-4 rounded-xl border border-[#F6B5B5] bg-[#FFF4F4] p-4">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="mt-0.5 h-5 w-5 text-[#C53030]" />
+            <div>
+              <p className="text-sm font-semibold text-[#9B1C1C]">Atenção ao impacto nas salas</p>
+              <p className="mt-1 text-sm leading-relaxed text-[#7A2330]">
+                Se houver salas de live chat ao vivo ou em espera vinculadas a este instrutor,
+                elas poderão ser encerradas durante a exclusão.
+              </p>
+            </div>
+          </div>
+        </div>
       </Modal>
     </main>
   );

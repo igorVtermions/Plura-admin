@@ -333,7 +333,12 @@ export function FollowersFollowingModal({
                   <div className="text-xs text-[#5A6480]">
                     {user.codename
                       ? `@${user.codename.replace(/^@/, "")}`
-                      : user.email ?? user.phone ?? "Sem identificador"}
+                      : user.email ??
+                        user.phone ??
+                        `@${String(user.name || "usuario")
+                          .trim()
+                          .toLowerCase()
+                          .replace(/\s+/g, ".")}`}
                   </div>
                 </div>
               </div>

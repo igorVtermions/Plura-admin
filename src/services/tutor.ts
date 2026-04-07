@@ -795,9 +795,16 @@ export async function fetchInstructorFollowers(
     perPage: String(perPage),
     limit: String(perPage),
   });
-  const payload = await invokeFunction<unknown>(`user-tutor-follow?${search.toString()}`, {
-    method: "GET",
-  });
+  let payload: unknown = null;
+  try {
+    payload = await invokeFunction<unknown>(`admin-user-tutor-follow?${search.toString()}`, {
+      method: "GET",
+    });
+  } catch (error) {
+    payload = await invokeFunction<unknown>(`user-tutor-follow?${search.toString()}`, {
+      method: "GET",
+    });
+  }
   const items = collectFollowersArray(payload)
     .map(normalizeInstructorFollowerEntry)
     .filter((item): item is InstructorFollower => item !== null);
@@ -868,7 +875,7 @@ export async function updateInstructor(
     const body = Object.fromEntries(bodyEntries);
     const res = await invokeFunction<unknown>("tutor", {
       method: "PUT",
-      body: { tutorId, ...body },
+      body: { id: tutorId, tutorId, ...body },
     });
     responses.push(res);
   }
@@ -891,5 +898,8 @@ export async function updateInstructor(
 
 export async function deleteInstructor(id: string): Promise<void> {
   if (!id) return;
-  await invokeFunction("tutor", { method: "DELETE", body: { tutorId: id } });
+  await invokeFunction(`tutor?id=${encodeURIComponent(id)}`, {
+    method: "DELETE",
+    body: { id, tutorId: id },
+  });
 }
