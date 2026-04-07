@@ -127,7 +127,7 @@ export async function toggleAdminRoomReminder(roomId: string, enabled: boolean) 
   await invokeFunction("admin-room-reminders", {
     method: "POST",
     body: {
-      roomId: Number(roomId),
+      roomId,
       enabled,
       remindBeforeMinutes: 10,
     },

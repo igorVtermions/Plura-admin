@@ -1,6 +1,15 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
+type MetricCard = {
+  value: string;
+  label: string;
+  description?: string;
+  bg?: string;
+  accent?: string;
+  span?: string;
+};
+
 export function MetricsPage() {
   const revenueCards = [
     {
@@ -109,6 +118,182 @@ export function MetricsPage() {
     })
     .join(" ");
 
+  const loadLogoPngDataUrl = async (): Promise<string | null> => {
+    try {
+      const response = await fetch("/LogoSmall.svg");
+      if (!response.ok) return null;
+      const svg = await response.text();
+      const blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
+      const objectUrl = URL.createObjectURL(blob);
+
+      try {
+        const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+          const img = new Image();
+          img.onload = () => resolve(img);
+          img.onerror = reject;
+          img.src = objectUrl;
+        });
+
+        const canvas = document.createElement("canvas");
+        canvas.width = image.width || 240;
+        canvas.height = image.height || 70;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return null;
+        ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+        return canvas.toDataURL("image/png");
+      } finally {
+        URL.revokeObjectURL(objectUrl);
+      }
+    } catch {
+      return null;
+    }
+  };
+
+  const handleExportData = async () => {
+    const { jsPDF } = await import("jspdf");
+    const logoDataUrl = await loadLogoPngDataUrl();
+
+    const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const margin = 14;
+
+    let y = 18;
+
+    pdf.setFillColor(23, 19, 43);
+    pdf.roundedRect(margin, y, pageWidth - margin * 2, 34, 4, 4, "F");
+
+    if (logoDataUrl) {
+      pdf.addImage(logoDataUrl, "PNG", pageWidth - 66, y + 7, 42, 12);
+    }
+
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(15);
+    pdf.text("Plura Talks - Metrics Report", margin + 7, y + 13);
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(10);
+    pdf.text("Administrative Dashboard Snapshot", margin + 7, y + 20);
+
+    const exportedAt = new Date();
+    pdf.setTextColor(202, 191, 255);
+    pdf.text(`Exported at: ${exportedAt.toLocaleString("pt-BR")}`, margin + 7, y + 27);
+    y += 42;
+
+    const ensureSpace = (needed: number) => {
+      if (y + needed <= pageHeight - margin) return;
+      pdf.addPage();
+      y = 20;
+    };
+
+    const drawSection = (
+      title: string,
+      cards: MetricCard[],
+      tone: { bg: [number, number, number]; border: [number, number, number]; value: [number, number, number] },
+    ) => {
+      ensureSpace(16);
+      pdf.setTextColor(23, 19, 43);
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(12);
+      pdf.text(title, margin, y);
+      y += 4;
+
+      const cardWidth = (pageWidth - margin * 2 - 6) / 2;
+      const cardHeight = 18;
+
+      cards.forEach((card, index) => {
+        if (index % 2 === 0) ensureSpace(cardHeight + 6);
+        const col = index % 2;
+        const row = Math.floor(index / 2);
+        const x = margin + col * (cardWidth + 6);
+        const rowY = y + row * (cardHeight + 5);
+
+        pdf.setFillColor(tone.bg[0], tone.bg[1], tone.bg[2]);
+        pdf.setDrawColor(tone.border[0], tone.border[1], tone.border[2]);
+        pdf.roundedRect(x, rowY, cardWidth, cardHeight, 3, 3, "FD");
+
+        pdf.setTextColor(89, 97, 122);
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(8.5);
+        pdf.text(card.label, x + 3, rowY + 6);
+
+        pdf.setTextColor(tone.value[0], tone.value[1], tone.value[2]);
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(12);
+        pdf.text(card.value, x + 3, rowY + 13);
+      });
+
+      y += Math.ceil(cards.length / 2) * (cardHeight + 5) + 3;
+    };
+
+    drawSection("Revenue", revenueCards, {
+      bg: [228, 243, 231],
+      border: [185, 222, 194],
+      value: [15, 94, 50],
+    });
+
+    drawSection("Subscriptions", subscriptionCards, {
+      bg: [240, 234, 255],
+      border: [217, 203, 255],
+      value: [90, 54, 204],
+    });
+
+    drawSection("Sessions", sessionCards, {
+      bg: [255, 233, 214],
+      border: [255, 206, 168],
+      value: [194, 65, 12],
+    });
+
+    drawSection("Engagement", engagementCards, {
+      bg: [240, 234, 255],
+      border: [217, 203, 255],
+      value: [90, 54, 204],
+    });
+
+    drawSection("Demographics", demographicCards, {
+      bg: [255, 233, 214],
+      border: [255, 206, 168],
+      value: [194, 65, 12],
+    });
+
+    ensureSpace(24);
+    pdf.setTextColor(23, 19, 43);
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(12);
+    pdf.text("Monthly Trend - New Signups", margin, y);
+    y += 6;
+
+    const rowH = 6;
+    const colMonthW = 24;
+    const colValueW = 24;
+
+    pdf.setFillColor(245, 241, 255);
+    pdf.roundedRect(margin, y, colMonthW + colValueW, rowH + 1.5, 2, 2, "F");
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(9);
+    pdf.setTextColor(58, 42, 106);
+    pdf.text("Month", margin + 2, y + 4.2);
+    pdf.text("Signups", margin + colMonthW + 2, y + 4.2);
+    y += rowH + 2;
+
+    pdf.setFont("helvetica", "normal");
+    pdf.setTextColor(52, 58, 77);
+    chartLabels.forEach((label, idx) => {
+      ensureSpace(rowH + 1);
+      if (idx % 2 === 0) {
+        pdf.setFillColor(250, 249, 255);
+        pdf.rect(margin, y - 4.5, colMonthW + colValueW, rowH, "F");
+      }
+      pdf.text(label, margin + 2, y);
+      pdf.text(String(chartPoints[idx]), margin + colMonthW + 2, y);
+      y += rowH;
+    });
+
+    const pad = (value: number) => String(value).padStart(2, "0");
+    const filename = `plura-talks-metrics-${exportedAt.getFullYear()}${pad(exportedAt.getMonth() + 1)}${pad(exportedAt.getDate())}-${pad(exportedAt.getHours())}${pad(exportedAt.getMinutes())}.pdf`;
+    pdf.save(filename);
+  };
+
   return (
     <div className="min-h-screen bg-white">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10 space-y-8">
@@ -117,8 +302,12 @@ export function MetricsPage() {
             <p className="text-xs sm:text-sm uppercase tracking-[0.2em] text-gray-400">Visão geral de métricas</p>
             <h1 className="text-3xl font-semibold text-[#17132b]">Dashboard</h1>
           </div>
-          <Button className="w-full sm:w-auto bg-[#17132b] hover:bg-[#221f3c] text-white px-6 rounded-full">
-            Exportar dados
+          <Button
+            type="button"
+            onClick={handleExportData}
+            className="w-full sm:w-auto bg-[#17132b] hover:bg-[#221f3c] text-white px-6 rounded-full"
+          >
+            Exportar PDF
           </Button>
         </header>
 
