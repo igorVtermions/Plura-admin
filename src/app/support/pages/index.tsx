@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 import {
   fetchSupportRooms,
   fetchSupportTickets,
+  fetchSupportTicketsTotals,
   deleteSupportRoom,
   deleteSupportTicket,
   updateSupportRoomStatus,
@@ -21,6 +22,8 @@ import Modal from "@/components/ui/Modal";
 export const metadata = { title: "Suporte | Plura Talks - Administrador" };
 
 export function SupportPage() {
+  const SUPPORT_TICKETS_CACHE_KEY = "admin:support:tickets:v1";
+  const SUPPORT_ROOMS_CACHE_KEY = "admin:support:rooms:v1";
   const navigate = useNavigate();
   const [ticketItems, setTicketItems] = React.useState<SupportTicket[]>([]);
   const [ticketTotals, setTicketTotals] = React.useState<SupportTicketsTotals | null>(null);
@@ -103,7 +106,7 @@ export function SupportPage() {
           ticket.reportedCodinome,
           ticket.tutorName,
         ]
-          .filter((value) => typeof value === "string" && value.length > 0)
+          .filter((value): value is string => typeof value === "string" && value.length > 0)
           .map((value) => value.toLowerCase());
         return haystack.some((value) => value.includes(query));
       });
@@ -145,6 +148,32 @@ export function SupportPage() {
   const [pageAnimating, setPageAnimating] = React.useState(false);
   const ticketsTotal = ticketTotals?.all ?? ticketItems.length;
 
+  React.useEffect(() => {
+    try {
+      if (typeof window === "undefined") return;
+      const rawTickets = sessionStorage.getItem(SUPPORT_TICKETS_CACHE_KEY);
+      const rawRooms = sessionStorage.getItem(SUPPORT_ROOMS_CACHE_KEY);
+
+      if (rawTickets) {
+        const parsed = JSON.parse(rawTickets);
+        if (Array.isArray(parsed)) {
+          setTicketItems(parsed as SupportTicket[]);
+          setTicketsLoading(false);
+        }
+      }
+
+      if (rawRooms) {
+        const parsed = JSON.parse(rawRooms);
+        if (Array.isArray(parsed)) {
+          setRooms(parsed as SupportRoom[]);
+          setRoomsLoading(false);
+        }
+      }
+    } catch {
+      // ignore cache errors
+    }
+  }, []);
+
   function formatTicketTitle(ticket: SupportTicket) {
     if (ticket.type === "problem_report") {
       return ticket.problemType ? `Problema técnico: ${ticket.problemType}` : "Problema técnico";
@@ -175,25 +204,25 @@ export function SupportPage() {
   React.useEffect(() => {
     let active = true;
     async function loadTickets() {
-      const startTime = Date.now();
       try {
-        setTicketsLoading(true);
+        setTicketsLoading((prev) => (ticketItems.length === 0 ? true : prev));
         setTicketsError(null);
-        const response = await fetchSupportTickets({ page: 1, perPage: 6, withCounts: true });
+        const response = await fetchSupportTickets({ page: 1, perPage: 6, withCounts: false });
         if (!active) return;
         setTicketItems(response.items);
-        setTicketTotals(response.totals ?? null);
+        try {
+          if (typeof window !== "undefined") {
+            sessionStorage.setItem(SUPPORT_TICKETS_CACHE_KEY, JSON.stringify(response.items));
+          }
+        } catch {
+          // ignore cache errors
+        }
       } catch (err) {
         if (!active) return;
         setTicketsError("Erro ao carregar tickets");
       } finally {
         if (!active) return;
-        const elapsed = Date.now() - startTime;
-        const minDelay = 500;
-        const remaining = Math.max(0, minDelay - elapsed);
-        setTimeout(() => {
-          if (active) setTicketsLoading(false);
-        }, remaining);
+        setTicketsLoading(false);
       }
     }
     loadTickets();
@@ -204,25 +233,43 @@ export function SupportPage() {
 
   React.useEffect(() => {
     let active = true;
-    async function loadRooms() {
-      const startTime = Date.now();
+    async function loadTicketTotals() {
       try {
-        setRoomsLoading(true);
+        const totals = await fetchSupportTicketsTotals();
+        if (!active) return;
+        setTicketTotals(totals);
+      } catch {
+        if (active) setTicketTotals(null);
+      }
+    }
+    loadTicketTotals();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  React.useEffect(() => {
+    let active = true;
+    async function loadRooms() {
+      try {
+        setRoomsLoading((prev) => (rooms.length === 0 ? true : prev));
         setRoomsError(null);
-        const response = await fetchSupportRooms({ page: 1, perPage: 50 });
+        const response = await fetchSupportRooms({ page: 1, perPage: 20 });
         if (!active) return;
         setRooms(response.items);
+        try {
+          if (typeof window !== "undefined") {
+            sessionStorage.setItem(SUPPORT_ROOMS_CACHE_KEY, JSON.stringify(response.items));
+          }
+        } catch {
+          // ignore cache errors
+        }
       } catch (err) {
         if (!active) return;
         setRoomsError("Erro ao carregar salas de suporte");
       } finally {
         if (!active) return;
-        const elapsed = Date.now() - startTime;
-        const minDelay = 500;
-        const remaining = Math.max(0, minDelay - elapsed);
-        setTimeout(() => {
-          if (active) setRoomsLoading(false);
-        }, remaining);
+        setRoomsLoading(false);
       }
     }
     loadRooms();
@@ -288,7 +335,7 @@ export function SupportPage() {
     setChatActionLoading(true);
     try {
       const result = await connectSupportChat({ id: selectedChat.id });
-      const payload = result && typeof result === "object" ? result : {};
+      const payload = result && typeof result === "object" ? (result as Record<string, unknown>) : {};
       const assignedAdminName =
         typeof payload.assignedAdminName === "string" ? payload.assignedAdminName : null;
       const connectedAt =
@@ -370,73 +417,56 @@ export function SupportPage() {
         <section className="p-1 rounded-lg">
           <h2 className="font-medium text-[20px] mb-4">Ações rápidas</h2>
           <div className="flex flex-col sm:flex-row gap-3">
-            {ticketsLoading || roomsLoading ? (
-              <>
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowTicketsOnly((current) => {
+                    const next = !current;
+                    setPage(1);
+                    return next;
+                  });
+                }}
+                className="rounded-md flex flex-col justify-center items-start gap-3 p-5 w-full flex-1 min-w-0 bg-[#F7F9FF] cursor-pointer transition-transform duration-150 ease-in-out hover:-translate-y-1 hover:scale-[1.02] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-[#977CEC]"
+                style={{ border: "1px solid #D0D9F1" }}
+              >
                 <div
-                  className="rounded-md flex flex-col justify-center items-start gap-3 p-5 w-full flex-1 min-w-0 bg-[#F7F9FF] animate-pulse"
-                  style={{ border: "1px solid #D0D9F1" }}
-                >
-                  <div className="h-8 w-8 rounded-full bg-[#E2E8F8]" />
-                  <div className="h-4 w-20 rounded bg-[#E2E8F8]" />
-                  <div className="h-4 w-28 rounded bg-[#E2E8F8]" />
-                </div>
-                <div
-                  className="rounded-md flex flex-col justify-center items-start gap-3 p-5 w-full flex-1 min-w-0 bg-[#F7F9FF] animate-pulse"
-                  style={{ border: "1px solid #D0D9F1" }}
-                >
-                  <div className="h-8 w-8 rounded-full bg-[#E2E8F8]" />
-                  <div className="h-4 w-24 rounded bg-[#E2E8F8]" />
-                  <div className="h-4 w-28 rounded bg-[#E2E8F8]" />
-                </div>
-              </>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowTicketsOnly((current) => {
-                      const next = !current;
-                      setPage(1);
-                      return next;
-                    });
+                  aria-hidden
+                  style={{
+                    width: 32,
+                    height: 32,
+                    WebkitMask: "url(/Megaphone.svg) center / contain no-repeat",
+                    mask: "url(/Megaphone.svg) center / contain no-repeat",
+                    background: "#808DB2",
                   }}
-                  className="rounded-md flex flex-col justify-center items-start gap-3 p-5 w-full flex-1 min-w-0 bg-[#F7F9FF] cursor-pointer transition-transform duration-150 ease-in-out hover:-translate-y-1 hover:scale-[1.02] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-[#977CEC]"
-                  style={{ border: "1px solid #D0D9F1" }}
-                >
-                  <div
-                    aria-hidden
-                    style={{
-                      width: 32,
-                      height: 32,
-                      WebkitMask: "url(/Megaphone.svg) center / contain no-repeat",
-                      mask: "url(/Megaphone.svg) center / contain no-repeat",
-                      background: "#808DB2",
-                    }}
-                  />
-                  <span className="text-[16px] font-medium text-[#191F33]">Ticket</span>
-                  <span className="text-sm text-[#191F33]">
-                    {ticketsTotal > 0
-                      ? `${ticketsTotal} ticket${ticketsTotal > 1 ? "s" : ""}`
-                      : "Nenhum ticket"}
-                  </span>
-                </button>
+                />
+                <span className="text-[16px] font-medium text-[#191F33]">Ticket</span>
+                <span className="text-sm text-[#191F33]">
+                  {ticketsLoading
+                    ? "Atualizando tickets..."
+                    : ticketsTotal > 0
+                    ? `${ticketsTotal} ticket${ticketsTotal > 1 ? "s" : ""}`
+                    : "Nenhum ticket"}
+                </span>
+              </button>
 
-                <button
-                  type="button"
-                  onClick={() => setShowTicketsOnly(false)}
-                  className="rounded-md flex flex-col justify-center items-start gap-3 p-5 w-full flex-1 min-w-0 bg-[#F7F9FF] cursor-pointer transition-transform duration-150 ease-in-out hover:-translate-y-1 hover:scale-[1.02] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-[#977CEC]"
-                  style={{ border: "1px solid #D0D9F1" }}
-                >
-                  <Image src="/Hand.svg" alt="Bate papo" width={32} height={32} />
-                  <span className="text-[16px] font-medium text-[#191F33]">Bate papo</span>
-                  <span className="text-sm text-[#191F33]">
-                    {rooms.length > 0
-                      ? `${rooms.length} chat${rooms.length > 1 ? "s" : ""}`
-                      : "Nenhum chat"}
-                  </span>
-                </button>
-              </>
-            )}
+              <button
+                type="button"
+                onClick={() => setShowTicketsOnly(false)}
+                className="rounded-md flex flex-col justify-center items-start gap-3 p-5 w-full flex-1 min-w-0 bg-[#F7F9FF] cursor-pointer transition-transform duration-150 ease-in-out hover:-translate-y-1 hover:scale-[1.02] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-[#977CEC]"
+                style={{ border: "1px solid #D0D9F1" }}
+              >
+                <Image src="/Hand.svg" alt="Bate papo" width={32} height={32} />
+                <span className="text-[16px] font-medium text-[#191F33]">Bate papo</span>
+                <span className="text-sm text-[#191F33]">
+                  {roomsLoading
+                    ? "Atualizando chats..."
+                    : rooms.length > 0
+                    ? `${rooms.length} chat${rooms.length > 1 ? "s" : ""}`
+                    : "Nenhum chat"}
+                </span>
+              </button>
+            </>
           </div>
         </section>
 

@@ -183,6 +183,16 @@ export async function fetchSupportTickets(
   };
 }
 
+export async function fetchSupportTicketsTotals(): Promise<SupportTicketsTotals | null> {
+  const response = await fetchSupportTickets({
+    page: 1,
+    perPage: 1,
+    withCounts: true,
+    type: "all",
+  });
+  return response.totals ?? null;
+}
+
 function normalizeRoom(raw: unknown): SupportRoom | null {
   if (!raw || typeof raw !== "object") return null;
   const data = raw as Record<string, unknown>;

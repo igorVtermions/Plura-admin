@@ -122,3 +122,78 @@ body {
   from { opacity: 0; transform: translateY(12px) scale(0.995); }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
+
+/* Scrollbar customizado para o modal de cadastro de instrutor */
+.instructor-modal-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #9b84ec #eef2ff;
+}
+
+.instructor-modal-scroll::-webkit-scrollbar {
+  width: 10px;
+}
+
+.instructor-modal-scroll::-webkit-scrollbar-track {
+  background: linear-gradient(180deg, #f4f6ff 0%, #eef2ff 100%);
+  border-radius: 9999px;
+}
+
+.instructor-modal-scroll::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #ad9af1 0%, #8c72e6 100%);
+  border: 2px solid #eef2ff;
+  border-radius: 9999px;
+}
+
+.instructor-modal-scroll::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #9d88ef 0%, #7f64df 100%);
+}
+
+/* Scrollbar customizado para o modal de criar sessão */
+.session-modal-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #9b84ec #eef2ff;
+}
+
+.session-modal-scroll::-webkit-scrollbar {
+  width: 10px;
+}
+
+.session-modal-scroll::-webkit-scrollbar-track {
+  background: linear-gradient(180deg, #f4f6ff 0%, #eef2ff 100%);
+  border-radius: 9999px;
+}
+
+.session-modal-scroll::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #ad9af1 0%, #8c72e6 100%);
+  border: 2px solid #eef2ff;
+  border-radius: 9999px;
+}
+
+.session-modal-scroll::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #9d88ef 0%, #7f64df 100%);
+}
+
+/* Scrollbar da aba de notificacoes reutiliza o visual dos modais */
+.notifications-panel-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #9b84ec #eef2ff;
+}
+
+.notifications-panel-scroll::-webkit-scrollbar {
+  width: 10px;
+}
+
+.notifications-panel-scroll::-webkit-scrollbar-track {
+  background: linear-gradient(180deg, #f4f6ff 0%, #eef2ff 100%);
+  border-radius: 9999px;
+}
+
+.notifications-panel-scroll::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #ad9af1 0%, #8c72e6 100%);
+  border: 2px solid #eef2ff;
+  border-radius: 9999px;
+}
+
+.notifications-panel-scroll::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #9d88ef 0%, #7f64df 100%);
+}

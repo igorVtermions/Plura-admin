@@ -128,10 +128,6 @@ export function LoginForm() {
           "Entrar"
         )}
       </Button>
-
-      <Link href="/register" className="text-sm text-primary hover:underline text-center">
-        Criar conta de admin
-      </Link>
     </form>
   );
 }

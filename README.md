@@ -48,3 +48,7 @@ Aliases de importação:
 - Build: `npm ci && npm run build` → saída em `dist/`.
 - Qualquer serviço de estáticos (incluindo Lovable) pode servir a pasta `dist/`.
 
+## Planejamento
+
+- Roadmap operacional da plataforma: `docs/plano-acao-90d.md`.
+

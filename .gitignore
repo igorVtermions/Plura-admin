@@ -11,6 +11,9 @@ dist/
 .vite/
 *.tsbuildinfo
 
+# Documentation
+docs/
+
 # Coverage
 coverage/
 

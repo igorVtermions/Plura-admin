@@ -6,6 +6,7 @@ import Image from "@/components/ui/Image";
 import { LiveRoomCard } from "./live-room-card";
 import { SoonRoomCard } from "./soon-room-card";
 import { invokeFunction } from "@/services/api";
+import { fetchAdminRoomReminders, toggleAdminRoomReminder } from "@/services/admin-notifications";
 
 type User = { id?: string | number; name?: string; photoUrl?: string };
 type RoomApi = Record<string, unknown>;
@@ -75,6 +76,7 @@ function categorizeRooms(rooms: RoomUI[]) {
 }
 
 export function RoomsControl() {
+  const ROOMS_CACHE_KEY = "admin:rooms-control:cache:v1";
   const navigate = useNavigate();
   const [tab, setTab] = useState<"live" | "waiting">("live");
   const [page, setPage] = useState(1);
@@ -90,35 +92,104 @@ export function RoomsControl() {
   const [allRooms, setAllRooms] = useState<RoomUI[]>([]);
 
   async function fetchRooms() {
-    setLoading(true);
+    const shouldShowSkeleton = allRooms.length === 0;
+    if (shouldShowSkeleton) setLoading(true);
     setError(null);
     try {
-      try {
-        await invokeFunction("auto-end-live-chat", { method: "POST" });
-      } catch (err) {
+      void invokeFunction("auto-end-live-chat", { method: "POST" }).catch((err) => {
         console.warn("auto-end-live-chat failed", err);
-      }
-      const data = await invokeFunction<unknown[]>("users-live-chat-rooms?status=all");
-
-      const all = Array.isArray(data) ? data : [];
-
-      const adapted = all
+      });
+      const liveData = await invokeFunction<unknown[]>("users-live-chat-rooms?status=live");
+      const liveRaw = Array.isArray(liveData) ? liveData : [];
+      const adaptedLive = liveRaw
         .map((x) => adaptRoom(x as RoomApi))
         .filter((r): r is RoomUI => r !== null);
-      setAllRooms(adapted);
+
+      setLiveRooms(adaptedLive);
+      setAllRooms(adaptedLive);
+
+      if (shouldShowSkeleton) setLoading(false);
+
+      void (async () => {
+        try {
+          const allData = await invokeFunction<unknown[]>("users-live-chat-rooms?status=all");
+          const all = Array.isArray(allData) ? allData : [];
+          const adapted = all
+            .map((x) => adaptRoom(x as RoomApi))
+            .filter((r): r is RoomUI => r !== null);
+          setAllRooms(adapted);
+          try {
+            if (typeof window !== "undefined") {
+              sessionStorage.setItem(ROOMS_CACHE_KEY, JSON.stringify(adapted));
+            }
+          } catch {
+            // ignore cache errors
+          }
+        } catch (err) {
+          console.warn("background all-rooms fetch failed", err);
+        }
+      })();
+
+      try {
+        if (typeof window !== "undefined") {
+          sessionStorage.setItem(ROOMS_CACHE_KEY, JSON.stringify(adaptedLive));
+        }
+      } catch {
+        // ignore cache errors
+      }
     } catch (e) {
       console.error("fetchRooms error", e);
       setError("Falha ao carregar salas");
       setLiveRooms([]);
       setSoonRooms([]);
     } finally {
-      setLoading(false);
+      if (shouldShowSkeleton) setLoading(false);
     }
   }
 
   useEffect(() => {
+    try {
+      if (typeof window !== "undefined") {
+        const raw = sessionStorage.getItem(ROOMS_CACHE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) {
+            const cached = parsed
+              .map((x) => adaptRoom(x as RoomApi))
+              .filter((r): r is RoomUI => r !== null);
+            if (cached.length > 0) {
+              setAllRooms(cached);
+              setLoading(false);
+            }
+          }
+        }
+      }
+    } catch {
+      // ignore cache errors
+    }
     fetchRooms();
   }, []);
+
+    useEffect(() => {
+      let active = true;
+      (async () => {
+        try {
+          const roomIds = await fetchAdminRoomReminders();
+          if (!active) return;
+          setReminders(() =>
+            roomIds.reduce<Record<string, boolean>>((acc, id) => {
+              acc[id] = true;
+              return acc;
+            }, {}),
+          );
+        } catch {
+          if (active) setReminders({});
+        }
+      })();
+      return () => {
+        active = false;
+      };
+    }, []);
 
   // Re-categorize rooms periodically so cards move from "soon" to "live" without a full refresh
   useEffect(() => {
@@ -173,8 +244,15 @@ export function RoomsControl() {
   function goPage(p: number) {
     setPage(Math.max(1, Math.min(totalPages, p)));
   }
-  function toggleReminder(id: string) {
-    setReminders((prev) => ({ ...prev, [id]: !prev[id] }));
+    async function toggleReminder(id: string) {
+      const previous = Boolean(reminders[id]);
+      const nextValue = !previous;
+      setReminders((prev) => ({ ...prev, [id]: nextValue }));
+      try {
+        await toggleAdminRoomReminder(id, nextValue);
+      } catch {
+        setReminders((prev) => ({ ...prev, [id]: previous }));
+      }
   }
 
   return (
@@ -228,7 +306,7 @@ export function RoomsControl() {
           pageAnimating ? "page-transition" : ""
         } flex-1 min-h-0 items-start`}
       >
-        {loading ? (
+        {loading && rooms.length === 0 ? (
           Array.from({ length: perPage }).map((_, i) => (
             <div
               key={i}

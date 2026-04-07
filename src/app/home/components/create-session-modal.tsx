@@ -407,6 +407,7 @@ export function CreateSessionModal({ open, onClose, onContinue, tutorOptions }: 
       top={<ProgressBar total={3} current={step} />}
       footer={step === 1 ? footerStep1 : footerStepNext}
       maxWidth="max-w-[520px]"
+      bodyClassName="session-modal-scroll"
     >
       <div className="flex flex-col items-center">
         <div

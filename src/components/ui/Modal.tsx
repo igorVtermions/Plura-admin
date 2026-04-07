@@ -13,6 +13,7 @@ type ModalProps = {
   children?: React.ReactNode;
   maxWidth?: string;
   modalStyle?: React.CSSProperties;
+  bodyClassName?: string;
 };
 
 export default function Modal({
@@ -25,6 +26,7 @@ export default function Modal({
   children,
   maxWidth = "max-w-3xl",
   modalStyle,
+  bodyClassName,
 }: ModalProps) {
   if (!open) return null;
 
@@ -70,7 +72,7 @@ export default function Modal({
         </div>
         <div style={{ background: "#FFFFFF" }}>
           <div
-            className="max-w-5xl mx-auto px-6 py-6 overflow-x-hidden"
+            className={`max-w-5xl mx-auto px-6 py-6 overflow-x-hidden ${bodyClassName ?? ""}`}
             style={{ maxHeight: "calc(100vh - 180px)", overflowY: "auto", overscrollBehaviorX: "contain" }}
           >
             {children}

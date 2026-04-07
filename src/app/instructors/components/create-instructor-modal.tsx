@@ -44,8 +44,7 @@ export function CreateInstructorModal({ open, onClose, onContinue, currentStep =
       setPanelHeight("auto");
       return;
     }
-    const rect = ref.getBoundingClientRect();
-    const h = Math.ceil(rect.height) || ref.offsetHeight || ref.scrollHeight || 0;
+    const h = Math.ceil(ref.scrollHeight) || ref.offsetHeight || 0;
     setPanelHeight(h);
   }
 
@@ -311,6 +310,7 @@ export function CreateInstructorModal({ open, onClose, onContinue, currentStep =
       top={<ProgressBar total={2} current={step} />}
       footer={step === 1 ? footerStep1 : footerStep2}
       maxWidth="max-w-[520px]"
+      bodyClassName="instructor-modal-scroll"
     >
       <div className="flex flex-col items-center">
         <div
@@ -349,7 +349,7 @@ export function CreateInstructorModal({ open, onClose, onContinue, currentStep =
                 setPwFocused={setPwFocused}
               />
             </div>
-            <div className="w-full" ref={step2Ref}>
+            <div className="w-full self-start" ref={step2Ref}>
               <Summary name={name} role={role} email={email} phone={phone} about={about} />
             </div>
           </div>
