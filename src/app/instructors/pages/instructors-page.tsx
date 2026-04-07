@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import Pagination from "../components/pagination";
 import { InstructorCard } from "../components/instructor-card";
 import { EditInstructorModal } from "@/app/instructors/components/edit-instructor-modal";
+import { CreateInstructorModal } from "@/app/instructors/components/create-instructor-modal";
 import { adaptInstructor, fetchInstructors, deleteInstructor } from "@/services/tutor";
 import type { InstructorCardData, InstructorListMeta, InstructorStatus } from "@/types/tutor";
 import { useNavigate } from "react-router-dom";
@@ -45,6 +46,7 @@ export function InstructorsPage() {
   const [pendingDeletes, setPendingDeletes] = useState<Record<string, boolean>>({});
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingOpen, setEditingOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
   const [selectedInstructor, setSelectedInstructor] = useState<InstructorCardData | null>(null);
 
   useEffect(() => {
@@ -198,9 +200,20 @@ export function InstructorsPage() {
     <main className="min-h-screen bg-white">
       <div className="mx-auto w-full max-w-6xl px-6 py-10">
         <header className="mb-8 space-y-6">
-          <div className="space-y-1">
-            <h1 className="text-[28px] font-semibold text-[#191F33]">Instrutores</h1>
-            <p className="text-sm text-[#5A6480]">Ver todos instrutores</p>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div className="space-y-1">
+              <h1 className="text-[28px] font-semibold text-[#191F33]">Instrutores</h1>
+              <p className="text-sm text-[#5A6480]">Ver todos instrutores</p>
+            </div>
+            <Button
+              type="button"
+              onClick={() => setCreateOpen(true)}
+              aria-label="Criar instrutor"
+              title="Criar instrutor"
+              className="flex h-11 w-11 items-center justify-center rounded-full bg-[#977CEC] text-2xl font-semibold leading-none text-white hover:bg-[#8666e6]"
+            >
+              <span className="relative -top-[1px]">+</span>
+            </Button>
           </div>
 
           <div className="flex flex-wrap items-center gap-4">
@@ -291,6 +304,17 @@ export function InstructorsPage() {
             setEditingId(null);
             setSelectedInstructor(null);
           }}
+        />
+
+        <CreateInstructorModal
+          open={createOpen}
+          onClose={() => setCreateOpen(false)}
+          onContinue={() => {
+            setCreateOpen(false);
+            handleReload();
+          }}
+          currentStep={1}
+          totalSteps={7}
         />
       </div>
     </main>

@@ -7,9 +7,10 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { Search } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import { useMemo, useState, useEffect, useCallback, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { CreateSessionModal } from "@/app/home/components/create-session-modal";
 import { LiveRoomCard } from "@/app/home/components/live-room-card";
 import { SoonRoomCard } from "@/app/home/components/soon-room-card";
 import { Pagination } from "../components/pagination";
@@ -253,6 +254,7 @@ export function NetworkPage() {
   const [roomParticipants, setRoomParticipants] = useState<Record<string, Participant[]>>({});
   const [showRoomDetails, setShowRoomDetails] = useState(false);
   const [reminders, setReminders] = useState<Record<string, boolean>>({});
+  const [openCreateSession, setOpenCreateSession] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -484,11 +486,22 @@ export function NetworkPage() {
         </>
       ) : (
         <>
-          <div className="space-y-1">
-            <h1 className="text-4xl font-semibold text-[#1F1235]">Chat geral</h1>
-            <p className="text-lg text-[#6F6C80]">
-              Navegue e gerencie os chats abertos
-            </p>
+          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div className="space-y-1">
+              <h1 className="text-4xl font-semibold text-[#1F1235]">Chat geral</h1>
+              <p className="text-lg text-[#6F6C80]">
+                Navegue e gerencie os chats abertos
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setOpenCreateSession(true)}
+              aria-label="Criar live chat"
+              title="Criar live chat"
+              className="flex h-12 w-12 cursor-pointer items-center justify-center rounded-full bg-[#977CEC] text-white transition-colors hover:bg-[#8666e6]"
+            >
+              <Plus className="h-5 w-5" strokeWidth={2.4} />
+            </button>
           </div>
 
           <div className="mt-10 flex flex-col gap-4 md:flex-row">
@@ -536,6 +549,15 @@ export function NetworkPage() {
               )}
             </>
           )}
+
+          <CreateSessionModal
+            open={openCreateSession}
+            onClose={() => setOpenCreateSession(false)}
+            onContinue={() => {
+              setOpenCreateSession(false);
+              reload();
+            }}
+          />
         </>
       )}
     </div>
