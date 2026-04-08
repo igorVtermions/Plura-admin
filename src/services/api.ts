@@ -12,9 +12,79 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 export const supabase =
-  supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey) : undefined;
+  supabaseUrl && supabaseAnonKey
+    ? createClient(supabaseUrl, supabaseAnonKey, {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true,
+        },
+      })
+    : undefined;
 
 type InvokeHeaders = Record<string, string>;
+let refreshSessionPromise: Promise<string | null> | null = null;
+
+function isUnauthorizedError(error: unknown) {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "status" in (error as Record<string, unknown>) &&
+    Number((error as { status?: unknown }).status) === 401
+  );
+}
+
+function getLegacyToken() {
+  if (typeof window === "undefined") return null;
+  try {
+    return localStorage.getItem("token");
+  } catch {
+    return null;
+  }
+}
+
+function setLegacyToken(token?: string | null) {
+  if (typeof window === "undefined") return;
+  if (token) localStorage.setItem("token", token);
+  else localStorage.removeItem("token");
+}
+
+export async function getClientAccessToken() {
+  if (supabase) {
+    try {
+      const { data, error } = await supabase.auth.getSession();
+      if (!error && data?.session?.access_token) {
+        setLegacyToken(data.session.access_token);
+        return data.session.access_token;
+      }
+    } catch {
+      // ignore session read errors
+    }
+  }
+
+  return getLegacyToken();
+}
+
+async function refreshClientSession() {
+  if (!supabase) return null;
+
+  if (!refreshSessionPromise) {
+    refreshSessionPromise = (async () => {
+      try {
+        const { data, error } = await supabase.auth.refreshSession();
+        if (error || !data?.session?.access_token) return null;
+        setLegacyToken(data.session.access_token);
+        return data.session.access_token;
+      } catch {
+        return null;
+      } finally {
+        refreshSessionPromise = null;
+      }
+    })();
+  }
+
+  return refreshSessionPromise;
+}
 
 function handleUnauthorizedRedirect() {
   try {
@@ -38,14 +108,12 @@ function shouldSerializeBody(body: unknown): body is Record<string, unknown> | u
   return true;
 }
 
-function withAuthHeader(headers: InvokeHeaders = {}): InvokeHeaders {
+async function withAuthHeader(headers: InvokeHeaders = {}): Promise<InvokeHeaders> {
   const next = { ...headers };
   try {
-    if (typeof window !== "undefined") {
-      const token = localStorage.getItem("token");
-      if (token && !next.Authorization) {
-        next.Authorization = `Bearer ${token}`;
-      }
+    const token = await getClientAccessToken();
+    if (token && !next.Authorization) {
+      next.Authorization = `Bearer ${token}`;
     }
   } catch {
     // ignore storage errors
@@ -70,22 +138,39 @@ export async function invokeFunction<T = unknown>(
     throw new Error("Supabase client is not initialized. Check your .env configuration.");
   }
 
-  const headers = withAuthHeader(options.headers);
-  let preparedBody = options.body;
+  const buildRequestPayload = async (tokenOverride?: string) => {
+    const headers = await withAuthHeader(options.headers);
+    if (tokenOverride) headers.Authorization = `Bearer ${tokenOverride}`;
 
-  if (shouldSerializeBody(options.body)) {
-    preparedBody = JSON.stringify(options.body);
-    if (!headers["Content-Type"]) headers["Content-Type"] = "application/json";
-  }
+    let preparedBody = options.body;
+    if (shouldSerializeBody(options.body)) {
+      preparedBody = JSON.stringify(options.body);
+      if (!headers["Content-Type"]) headers["Content-Type"] = "application/json";
+    }
 
-  const { data, error } = await supabase.functions.invoke<T>(functionName, {
-    ...options,
-    headers,
-    body: preparedBody,
-  });
+    return {
+      ...options,
+      headers,
+      body: preparedBody,
+    };
+  };
+
+  let payload = await buildRequestPayload();
+  let { data, error } = await supabase.functions.invoke<T>(functionName, payload);
 
   if (error) {
-    if (typeof error === "object" && error && "status" in error && (error as any).status === 401) {
+    if (isUnauthorizedError(error)) {
+      const refreshedToken = await refreshClientSession();
+      if (refreshedToken) {
+        payload = await buildRequestPayload(refreshedToken);
+        const retry = await supabase.functions.invoke<T>(functionName, payload);
+        if (!retry.error) return retry.data;
+        if (isUnauthorizedError(retry.error)) {
+          handleUnauthorizedRedirect();
+        }
+        console.error(`Error invoking function '${functionName}' after refresh:`, retry.error);
+        throw retry.error;
+      }
       handleUnauthorizedRedirect();
     }
     console.error(`Error invoking function '${functionName}':`, error);
@@ -104,45 +189,83 @@ const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  try {
-    if (typeof window !== "undefined") {
-      const token = localStorage.getItem("token");
+  return (async () => {
+    try {
+      const token = await getClientAccessToken();
       const url = String(config.url ?? "");
       const isAuthFree = /\/(admin|users)\/login\b/.test(url);
       if (!isAuthFree && token && config.headers) {
         config.headers.Authorization = `Bearer ${token}`;
       }
+    } catch {
+      // ignora
     }
-  } catch {
-    // ignora
-  }
-  return config;
+    return config;
+  })();
 });
 
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error?.response?.status === 401 && typeof window !== "undefined") {
-      localStorage.removeItem("token");
-      location.assign("/");
+  async (error) => {
+    if (error?.response?.status === 401) {
+      const originalRequest = (error?.config || {}) as Record<string, unknown>;
+      if (!originalRequest.__sessionRetried) {
+        originalRequest.__sessionRetried = true;
+        const refreshedToken = await refreshClientSession();
+        if (refreshedToken) {
+          originalRequest.headers = {
+            ...((originalRequest.headers as Record<string, string> | undefined) || {}),
+            Authorization: `Bearer ${refreshedToken}`,
+          };
+          return api.request(originalRequest as any);
+        }
+      }
+
+      handleUnauthorizedRedirect();
     }
+
     return Promise.reject(error);
   },
 );
 
 export function setClientToken(token?: string | null) {
-  if (typeof window === "undefined") return;
-  if (token) localStorage.setItem("token", token);
-  else localStorage.removeItem("token");
+  setLegacyToken(token);
+
+  if (!supabase) return;
+
+  if (!token) {
+    void supabase.auth.signOut({ scope: "local" });
+  }
 }
 
 export function getClientToken() {
-  if (typeof window === "undefined") return null;
-  try {
-    return localStorage.getItem("token");
-  } catch {
-    return null;
+  return getLegacyToken();
+}
+
+export async function setClientSession(params: { accessToken: string; refreshToken?: string | null }) {
+  const accessToken = params.accessToken?.trim();
+  if (!accessToken) {
+    setClientToken(null);
+    return false;
   }
+
+  if (supabase && params.refreshToken) {
+    try {
+      const { error } = await supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: params.refreshToken,
+      });
+      if (!error) {
+        setLegacyToken(accessToken);
+        return true;
+      }
+    } catch {
+      // fallback below
+    }
+  }
+
+  setLegacyToken(accessToken);
+  return true;
 }
 
 export default api;

@@ -14,6 +14,7 @@ import { RoomHistoryPage } from "@/app/rooms/pages/room-history-page";
 import { SupportChatPage } from "@/app/support/pages/[id]/support-chat-page";
 import { SupportPage } from "@/app/support/pages";
 import { SupportTicketPage } from "@/app/support/pages/ticket";
+import { SettingsPage } from "@/app/settings/pages";
 import { UserProfilePage } from "@/app/users/pages/user-profile-page";
 import { UsersPage } from "@/app/users/pages/users-page";
 import { Toaster } from "react-hot-toast";
@@ -65,6 +66,7 @@ export default function App() {
                   <Route path="/instructors/:instructorId" element={<InstructorProfilePage />} />
                   <Route path="/network" element={<NetworkPage />} />
                   <Route path="/metrics" element={<MetricsPage />} />
+                  <Route path="/settings" element={<SettingsPage />} />
                   <Route path="/rooms/history/:historyId" element={<RoomHistoryPage />} />
                 </Route>
 

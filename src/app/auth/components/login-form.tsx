@@ -7,7 +7,7 @@ import { useRouter } from "@/lib/router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { invokeFunction, setClientToken } from "@/services/api";
+import { invokeFunction, setClientSession, setClientToken } from "@/services/api";
 
 export function LoginForm() {
   const router = useRouter();
@@ -33,17 +33,21 @@ export function LoginForm() {
       try {
         setClientToken(null);
       } catch {}
-      const res = await invokeFunction<{ token?: string; accessToken?: string; message?: string }>(
-        "admin-login",
-        {
-          method: "POST",
-          body: { email, password },
-        },
-      );
+      const res = await invokeFunction<{
+        token?: string;
+        accessToken?: string;
+        refreshToken?: string;
+        refresh_token?: string;
+        message?: string;
+      }>("admin-login", {
+        method: "POST",
+        body: { email, password },
+      });
 
       const token = res?.token ?? res?.accessToken ?? null;
+      const refreshToken = res?.refreshToken ?? res?.refresh_token ?? null;
       if (token) {
-        setClientToken(token);
+        await setClientSession({ accessToken: token, refreshToken });
         router.push("/home");
         return;
       }

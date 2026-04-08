@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Navigate, Outlet } from "react-router-dom";
-import { getClientToken, invokeFunction, setClientToken } from "@/services/api";
+import { getClientAccessToken, invokeFunction, setClientToken } from "@/services/api";
 
 function SessionSkeleton() {
   return (
@@ -32,7 +32,7 @@ export function ProtectedRoute() {
     let active = true;
 
     async function validateSession() {
-      const token = getClientToken();
+      const token = await getClientAccessToken();
       if (!token) {
         if (active) setStatus("unauthorized");
         return;
@@ -42,9 +42,18 @@ export function ProtectedRoute() {
         await invokeFunction("admin-me", { method: "GET" });
         if (active) setStatus("authorized");
       } catch (error) {
-        console.warn("Protegido: sessao invalida ou expirada.", error);
-        setClientToken(null);
-        if (active) setStatus("unauthorized");
+        const status =
+          typeof error === "object" && error && "status" in (error as Record<string, unknown>)
+            ? Number((error as { status?: unknown }).status)
+            : null;
+        if (status === 401) {
+          console.warn("Protegido: sessao invalida ou expirada.", error);
+          setClientToken(null);
+          if (active) setStatus("unauthorized");
+          return;
+        }
+        // Keep current session when the check fails for transient backend errors.
+        if (active) setStatus("authorized");
       }
     }
 

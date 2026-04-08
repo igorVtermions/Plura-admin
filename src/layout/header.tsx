@@ -35,9 +35,22 @@ export function Header({ adminName = "Admin" }: HeaderProps) {
       } catch {}
     }
 
+    const handleProfileUpdated = (event: Event) => {
+      const custom = event as CustomEvent<{ name?: string }>;
+      const nextName = custom?.detail?.name;
+      if (typeof nextName === "string" && nextName.trim().length > 0) {
+        setName(nextName.trim());
+        return;
+      }
+      fetchMe();
+    };
+
     fetchMe();
+
+    window.addEventListener("admin:profile-updated", handleProfileUpdated);
     return () => {
       mounted = false;
+      window.removeEventListener("admin:profile-updated", handleProfileUpdated);
     };
   }, []);
 
@@ -64,8 +77,8 @@ export function Header({ adminName = "Admin" }: HeaderProps) {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b" style={headerStyle}>
-      <div className="flex items-center justify-between px-5">
+    <header className="sticky top-0 z-50 w-full h-24 border-b" style={headerStyle}>
+      <div className="flex h-full items-center justify-between px-5">
         <div className="flex items-center gap-3">
           <Link href="/home" aria-label="Ir para Início" className="flex items-center">
             <Image src="/Logo.svg" alt="Plura Talks" width={40} height={40} priority />
