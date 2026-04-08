@@ -24,6 +24,7 @@ export const metadata = { title: "Suporte | Plura Talks - Administrador" };
 export function SupportPage() {
   const SUPPORT_TICKETS_CACHE_KEY = "admin:support:tickets:v1";
   const SUPPORT_ROOMS_CACHE_KEY = "admin:support:rooms:v1";
+  const SUPPORT_REFRESH_INTERVAL_MS = 10_000;
   const navigate = useNavigate();
   const [ticketItems, setTicketItems] = React.useState<SupportTicket[]>([]);
   const [ticketTotals, setTicketTotals] = React.useState<SupportTicketsTotals | null>(null);
@@ -145,6 +146,8 @@ export function SupportPage() {
   const pagesContainerRef = React.useRef<HTMLDivElement | null>(null);
   const selectedBtnRef = React.useRef<HTMLButtonElement | null>(null);
   const menuRef = React.useRef<HTMLDivElement | null>(null);
+  const supportRefreshInFlightRef = React.useRef(false);
+  const supportInitialLoadDoneRef = React.useRef(false);
   const [pageAnimating, setPageAnimating] = React.useState(false);
   const ticketsTotal = ticketTotals?.all ?? ticketItems.length;
 
@@ -200,83 +203,102 @@ export function SupportPage() {
     return { label: "prioridade baixa", color: "#6B7280", bg: "#F3F4F6", border: "#E5E7EB" };
   }
 
+  const refreshSupportData = React.useCallback(
+    async (options?: { forceLoading?: boolean }) => {
+      if (supportRefreshInFlightRef.current) return;
+      supportRefreshInFlightRef.current = true;
 
-  React.useEffect(() => {
-    let active = true;
-    async function loadTickets() {
+      const shouldShowLoading = options?.forceLoading || !supportInitialLoadDoneRef.current;
+      if (shouldShowLoading) {
+        setTicketsLoading(true);
+        setRoomsLoading(true);
+      }
+
       try {
-        setTicketsLoading((prev) => (ticketItems.length === 0 ? true : prev));
-        setTicketsError(null);
-        const response = await fetchSupportTickets({ page: 1, perPage: 6, withCounts: false });
-        if (!active) return;
-        setTicketItems(response.items);
-        try {
-          if (typeof window !== "undefined") {
-            sessionStorage.setItem(SUPPORT_TICKETS_CACHE_KEY, JSON.stringify(response.items));
+        const [ticketsResponse, totalsResponse, roomsResponse] = await Promise.allSettled([
+          fetchSupportTickets({ page: 1, perPage: 6, withCounts: false }),
+          fetchSupportTicketsTotals(),
+          fetchSupportRooms({ page: 1, perPage: 20 }),
+        ]);
+
+        if (ticketsResponse.status === "fulfilled") {
+          setTicketItems(ticketsResponse.value.items);
+          setTicketsError(null);
+          try {
+            if (typeof window !== "undefined") {
+              sessionStorage.setItem(
+                SUPPORT_TICKETS_CACHE_KEY,
+                JSON.stringify(ticketsResponse.value.items),
+              );
+            }
+          } catch {
+            // ignore cache errors
           }
-        } catch {
-          // ignore cache errors
+        } else if (!supportInitialLoadDoneRef.current) {
+          setTicketsError("Erro ao carregar tickets");
         }
-      } catch (err) {
-        if (!active) return;
-        setTicketsError("Erro ao carregar tickets");
+
+        if (totalsResponse.status === "fulfilled") {
+          setTicketTotals(totalsResponse.value);
+        }
+
+        if (roomsResponse.status === "fulfilled") {
+          setRooms(roomsResponse.value.items);
+          setRoomsError(null);
+          try {
+            if (typeof window !== "undefined") {
+              sessionStorage.setItem(SUPPORT_ROOMS_CACHE_KEY, JSON.stringify(roomsResponse.value.items));
+            }
+          } catch {
+            // ignore cache errors
+          }
+        } else if (!supportInitialLoadDoneRef.current) {
+          setRoomsError("Erro ao carregar salas de suporte");
+        }
       } finally {
-        if (!active) return;
+        supportInitialLoadDoneRef.current = true;
+        supportRefreshInFlightRef.current = false;
         setTicketsLoading(false);
-      }
-    }
-    loadTickets();
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  React.useEffect(() => {
-    let active = true;
-    async function loadTicketTotals() {
-      try {
-        const totals = await fetchSupportTicketsTotals();
-        if (!active) return;
-        setTicketTotals(totals);
-      } catch {
-        if (active) setTicketTotals(null);
-      }
-    }
-    loadTicketTotals();
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  React.useEffect(() => {
-    let active = true;
-    async function loadRooms() {
-      try {
-        setRoomsLoading((prev) => (rooms.length === 0 ? true : prev));
-        setRoomsError(null);
-        const response = await fetchSupportRooms({ page: 1, perPage: 20 });
-        if (!active) return;
-        setRooms(response.items);
-        try {
-          if (typeof window !== "undefined") {
-            sessionStorage.setItem(SUPPORT_ROOMS_CACHE_KEY, JSON.stringify(response.items));
-          }
-        } catch {
-          // ignore cache errors
-        }
-      } catch (err) {
-        if (!active) return;
-        setRoomsError("Erro ao carregar salas de suporte");
-      } finally {
-        if (!active) return;
         setRoomsLoading(false);
       }
-    }
-    loadRooms();
+    },
+    [SUPPORT_ROOMS_CACHE_KEY, SUPPORT_TICKETS_CACHE_KEY],
+  );
+
+  React.useEffect(() => {
+    let active = true;
+    const runRefresh = async (options?: { forceLoading?: boolean }) => {
+      if (!active) return;
+      await refreshSupportData(options);
+    };
+
+    void runRefresh({ forceLoading: true });
+
+    const intervalId = window.setInterval(() => {
+      if (document.visibilityState !== "visible") return;
+      void runRefresh();
+    }, SUPPORT_REFRESH_INTERVAL_MS);
+
+    const onFocus = () => {
+      void runRefresh();
+    };
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        void runRefresh();
+      }
+    };
+
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
     return () => {
       active = false;
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
     };
-  }, []);
+  }, [refreshSupportData, SUPPORT_REFRESH_INTERVAL_MS]);
 
   React.useEffect(() => {
     if (!menuOpenId) return;

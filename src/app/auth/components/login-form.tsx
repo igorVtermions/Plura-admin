@@ -7,7 +7,7 @@ import { useRouter } from "@/lib/router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { invokeFunction, setClientSession, setClientToken } from "@/services/api";
+import { invokeFunction, setClientSession, setClientToken, supabase } from "@/services/api";
 
 export function LoginForm() {
   const router = useRouter();
@@ -47,7 +47,30 @@ export function LoginForm() {
       const token = res?.token ?? res?.accessToken ?? null;
       const refreshToken = res?.refreshToken ?? res?.refresh_token ?? null;
       if (token) {
-        await setClientSession({ accessToken: token, refreshToken });
+        let sessionStored = await setClientSession({ accessToken: token, refreshToken });
+
+        // Fallback: establish a full Supabase session directly from credentials
+        // when the edge response doesn't provide refresh token.
+        if (!sessionStored && supabase) {
+          try {
+            const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+              email,
+              password,
+            });
+            if (!authError && authData?.session?.access_token) {
+              sessionStored = await setClientSession({
+                accessToken: authData.session.access_token,
+                refreshToken: authData.session.refresh_token,
+              });
+            }
+          } catch {
+            // ignore fallback auth errors and keep legacy token path
+          }
+        }
+
+        if (!sessionStored) {
+          setClientToken(token);
+        }
         router.push("/home");
         return;
       }

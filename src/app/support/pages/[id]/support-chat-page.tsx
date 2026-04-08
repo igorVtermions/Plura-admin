@@ -5,8 +5,10 @@ import { useNavigate, useParams } from "react-router-dom";
 import Image from "@/components/ui/Image";
 import Link from "@/router/Link";
 import Modal from "@/components/ui/Modal";
+import { supabase } from "@/services/api";
 import {
   fetchSupportChatDetail,
+  fetchSupportChatMessages,
   sendSupportChatMessage,
   deleteSupportRoom,
   type SupportChatMessage,
@@ -15,7 +17,11 @@ import {
 
 export const metadata = { title: "Chat de Suporte | Plura Talks - Administrador" };
 
-const POLL_INTERVAL_MS = 5000;
+const POLL_INTERVAL_MS = 1200;
+const ROOM_REFRESH_EVERY_POLLS = 4;
+const REQUEST_TIMEOUT_MS = 10000;
+const INCREMENTAL_LOOKBACK_MS = 2 * 60 * 1000;
+const MISSED_INCREMENTAL_BEFORE_DETAIL_REFRESH = 2;
 
 export function SupportChatPage() {
   const navigate = useNavigate();
@@ -32,7 +38,12 @@ export function SupportChatPage() {
   const [sendError, setSendError] = React.useState<string | null>(null);
   const [resolving, setResolving] = React.useState(false);
   const [resolveError, setResolveError] = React.useState<string | null>(null);
+  const messagesScrollRef = React.useRef<HTMLDivElement | null>(null);
   const messagesEndRef = React.useRef<HTMLDivElement | null>(null);
+  const latestMessageAtRef = React.useRef<string | null>(null);
+  const pollCountRef = React.useRef(0);
+  const missedIncrementalRef = React.useRef(0);
+  const pullIncrementalRef = React.useRef<(() => Promise<void>) | null>(null);
 
   React.useEffect(() => {
     let active = true;
@@ -49,6 +60,8 @@ export function SupportChatPage() {
         if (!active) return;
         setRoom(data.room ?? null);
         setMessages(data.messages);
+        latestMessageAtRef.current = getLatestCreatedAt(data.messages);
+        pollCountRef.current = 0;
       } catch {
         if (!active) return;
         setError("Erro ao carregar chat.");
@@ -67,13 +80,54 @@ export function SupportChatPage() {
     let active = true;
     let timeoutId: number | null = null;
 
+    const buildSinceCursor = () => {
+      const current = latestMessageAtRef.current;
+      if (!current) return null;
+      const base = new Date(current).getTime();
+      if (Number.isNaN(base)) return current;
+      return new Date(base - INCREMENTAL_LOOKBACK_MS).toISOString();
+    };
+
     async function pollMessages() {
       if (!active || !id) return;
       try {
-        const data = await fetchSupportChatDetail({ id });
-        if (!active) return;
-        setRoom((previous) => previous ?? data.room ?? null);
-        setMessages((current) => mergeMessages(current, data.messages));
+        const messagesResult = await withTimeout(
+          fetchSupportChatMessages({
+            id,
+            since: buildSinceCursor(),
+            limit: 120,
+          }),
+          REQUEST_TIMEOUT_MS,
+        );
+
+        if (!active || !messagesResult) return;
+
+        if (messagesResult.items.length) {
+          missedIncrementalRef.current = 0;
+          setMessages((current) => mergeMessages(current, messagesResult.items));
+          latestMessageAtRef.current =
+            messagesResult.latestCreatedAt || getLatestCreatedAt(messagesResult.items);
+        } else {
+          missedIncrementalRef.current += 1;
+        }
+
+        pollCountRef.current += 1;
+        if (
+          pollCountRef.current >= ROOM_REFRESH_EVERY_POLLS ||
+          missedIncrementalRef.current >= MISSED_INCREMENTAL_BEFORE_DETAIL_REFRESH
+        ) {
+          pollCountRef.current = 0;
+          missedIncrementalRef.current = 0;
+          const detail = await withTimeout(fetchSupportChatDetail({ id }), REQUEST_TIMEOUT_MS);
+          if (!active || !detail) return;
+          setRoom((previous) => detail.room ?? previous ?? null);
+          if (detail.messages.length) {
+            setMessages((current) => mergeMessages(current, detail.messages));
+            latestMessageAtRef.current = getLatestCreatedAt(detail.messages);
+          }
+        }
+      } catch {
+        // ignore transient polling failures
       } finally {
         if (!active) return;
         timeoutId = window.setTimeout(pollMessages, POLL_INTERVAL_MS);
@@ -85,6 +139,103 @@ export function SupportChatPage() {
     return () => {
       active = false;
       if (timeoutId !== null) window.clearTimeout(timeoutId);
+    };
+  }, [id, loading]);
+  React.useEffect(() => {
+    if (!id || loading || !supabase) return;
+    let active = true;
+    const channels: any[] = [];
+
+    const buildSinceCursor = () => {
+      const current = latestMessageAtRef.current;
+      if (!current) return null;
+      const base = new Date(current).getTime();
+      if (Number.isNaN(base)) return current;
+      return new Date(base - INCREMENTAL_LOOKBACK_MS).toISOString();
+    };
+
+    const pullIncremental = async () => {
+      const result = await withTimeout(
+        fetchSupportChatMessages({
+          id,
+          since: buildSinceCursor(),
+          limit: 120,
+        }),
+        REQUEST_TIMEOUT_MS,
+      );
+
+      if (!active || !result || !result.items.length) {
+        missedIncrementalRef.current += 1;
+        return;
+      }
+
+      missedIncrementalRef.current = 0;
+      setMessages((current) => mergeMessages(current, result.items));
+      latestMessageAtRef.current =
+        result.latestCreatedAt || getLatestCreatedAt(result.items) || latestMessageAtRef.current;
+    };
+    pullIncrementalRef.current = pullIncremental;
+
+    const subscribe = (filter: string, suffix: string) => {
+      const channel = supabase
+        .channel(`support-message:${id}:${suffix}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "SupportMessage",
+            filter,
+          },
+          () => {
+            void pullIncremental();
+          },
+        )
+        .subscribe((status) => {
+          if (status === "SUBSCRIBED") {
+            void pullIncremental();
+          }
+        });
+
+      channels.push(channel);
+    };
+
+    subscribe(`chatId=eq.${id}`, "chatId");
+    subscribe(`chatid=eq.${id}`, "chatid");
+
+    return () => {
+      active = false;
+      pullIncrementalRef.current = null;
+      for (const channel of channels) {
+        supabase.removeChannel(channel);
+      }
+    };
+  }, [id, loading]);
+
+  React.useEffect(() => {
+    if (!id || loading) return;
+
+    const triggerRefresh = () => {
+      const pull = pullIncrementalRef.current;
+      if (pull) void pull();
+    };
+
+    const onVisibilityChange = () => {
+      if (!document.hidden) {
+        triggerRefresh();
+      }
+    };
+
+    const onFocus = () => {
+      triggerRefresh();
+    };
+
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, [id, loading]);
 
@@ -111,9 +262,9 @@ export function SupportChatPage() {
   const sendDisabled = inputDisabled || sending || messageDraft.trim().length === 0;
 
   React.useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
-    }
+    const container = messagesScrollRef.current;
+    if (!container) return;
+    container.scrollTop = container.scrollHeight;
   }, [messages]);
 
   async function handleSendMessage(event?: React.FormEvent<HTMLFormElement> | React.MouseEvent<HTMLButtonElement>) {
@@ -129,6 +280,7 @@ export function SupportChatPage() {
         throw new Error("INVALID_RESPONSE");
       }
       setMessages((current) => [...current, saved]);
+      latestMessageAtRef.current = saved.createdAt || latestMessageAtRef.current;
       setMessageDraft("");
     } catch (err) {
       console.error("Erro ao enviar mensagem", err);
@@ -270,7 +422,12 @@ export function SupportChatPage() {
                 </header>
 
                 <div className="p-4" style={{ background: "#FFFFFF" }}>
-                  <div className="flex flex-col gap-3" style={{ minHeight: 520 }}>
+                  <div
+                    ref={messagesScrollRef}
+                    className="overflow-y-auto pr-1"
+                    style={{ minHeight: 360, maxHeight: 520 }}
+                  >
+                    <div className="flex flex-col gap-3">
                     {showEmptyState ? (
                       <div
                         className="flex flex-col items-center justify-center text-sm"
@@ -341,7 +498,8 @@ export function SupportChatPage() {
                         );
                       })
                     )}
-                    <div ref={messagesEndRef} />
+                      <div ref={messagesEndRef} />
+                    </div>
                   </div>
                 </div>
 
@@ -496,3 +654,28 @@ function compareTimestamps(a: string | null, b: string | null) {
   const timeB = b ? new Date(b).getTime() : 0;
   return timeA - timeB;
 }
+
+function getLatestCreatedAt(messages: SupportChatMessage[]): string | null {
+  if (!messages || messages.length === 0) return null;
+  const sorted = [...messages].sort((a, b) => compareTimestamps(a.createdAt, b.createdAt));
+  return sorted[sorted.length - 1]?.createdAt ?? null;
+}
+
+
+
+
+
+
+
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T | null> {
+  return await Promise.race([
+    promise,
+    new Promise<null>((resolve) => {
+      window.setTimeout(() => resolve(null), timeoutMs);
+    }),
+  ]);
+}
+
+
+
+

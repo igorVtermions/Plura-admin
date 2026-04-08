@@ -532,7 +532,7 @@ export function RoomsControl() {
         </div>
       )}
 
-      <style jsx>{`
+      <style>{`
         .page-transition {
           animation: pageFade 320ms cubic-bezier(0.22, 0.9, 0.32, 1);
         }

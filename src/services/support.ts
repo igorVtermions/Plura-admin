@@ -350,6 +350,42 @@ export async function fetchSupportChatDetail(params: { id: string }): Promise<Su
   };
 }
 
+
+export async function fetchSupportChatMessages(params: {
+  id: string;
+  since?: string | null;
+  limit?: number;
+}): Promise<{ items: SupportChatMessage[]; latestCreatedAt: string | null }> {
+  const searchParams = new URLSearchParams();
+  searchParams.set("id", params.id);
+  if (params.since) searchParams.set("since", params.since);
+  if (params.limit && Number.isFinite(params.limit)) {
+    searchParams.set("limit", String(params.limit));
+  }
+
+  const payload = await invokeFunction<unknown>(
+    `support-chat-messages?${searchParams.toString()}`,
+    { method: "GET" },
+  );
+
+  if (!payload || typeof payload !== "object") {
+    return { items: [], latestCreatedAt: params.since ?? null };
+  }
+
+  const data = payload as Record<string, unknown>;
+  const items = Array.isArray(data.items)
+    ? (data.items.map(normalizeChatMessage).filter(Boolean) as SupportChatMessage[])
+    : [];
+
+  const latestCreatedAt =
+    typeof data.latestCreatedAt === "string"
+      ? data.latestCreatedAt
+      : items.length
+        ? items[items.length - 1]?.createdAt ?? null
+        : params.since ?? null;
+
+  return { items, latestCreatedAt };
+}
 export async function sendSupportChatMessage(params: { chatId: string; message: string }) {
   const body = {
     chatId: params.chatId,
@@ -386,3 +422,4 @@ export async function sendSupportTicketReply(params: {
     body: params,
   });
 }
+
