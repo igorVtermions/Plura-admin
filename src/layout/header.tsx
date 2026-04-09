@@ -7,6 +7,8 @@ import { useRouter } from "@/lib/router";
 import { Button } from "@/components/ui/button";
 import { invokeFunction, setClientToken, supabase } from "@/services/api";
 import Notifications from "./notifications";
+import { Menu } from "lucide-react";
+import { useSidebar } from "./sidebar-context";
 
 type HeaderProps = {
   adminName?: string;
@@ -14,6 +16,7 @@ type HeaderProps = {
 
 export function Header({ adminName = "Admin" }: HeaderProps) {
   const router = useRouter();
+  const { openSidebar } = useSidebar();
   const [name, setName] = useState<string | null>(null);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [logoutLoading, setLogoutLoading] = useState(false);
@@ -103,11 +106,19 @@ export function Header({ adminName = "Admin" }: HeaderProps) {
         </div>
 
         <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={openSidebar}
+            className="flex h-10 w-10 items-center justify-center rounded-lg border border-[#D0D9F1] bg-white lg:hidden"
+            aria-label="Abrir menu"
+          >
+            <Menu className="h-5 w-5 text-[#425066]" />
+          </button>
           <Notifications />
           <button
             type="button"
             onClick={() => setShowLogoutModal(true)}
-            className="flex w-10 h-10 p-2 items-center justify-center rounded-lg cursor-pointer"
+            className="hidden h-10 w-10 cursor-pointer items-center justify-center rounded-lg p-2 lg:flex"
             style={{ border: "1px solid #D0D9F1", background: "#FFFFFF" }}
             aria-label="Sair"
           >

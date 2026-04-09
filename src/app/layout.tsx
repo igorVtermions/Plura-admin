@@ -4,7 +4,7 @@ import HeaderWrapper from "@/layout/header-wrapper";
 import { SidebarProvider } from "@/layout/sidebar-context";
 import { Toaster } from "react-hot-toast";
 
-// Componente de layout neutro (sem Next), Ãºtil se vocÃª quiser envolver pÃ¡ginas
+// Componente de layout neutro (sem Next), útil se você quiser envolver páginas
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="antialiased">

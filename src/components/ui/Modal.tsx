@@ -32,29 +32,29 @@ export default function Modal({
 
   return (
     <div
-      className="fixed inset-0 z-60 flex items-center justify-center px-4 py-6"
+      className="fixed inset-0 z-60 flex items-end justify-center px-2 py-3 sm:items-center sm:px-4 sm:py-6"
       aria-modal="true"
       role="dialog"
       aria-label={title ?? "Modal"}
     >
       <div className="absolute inset-0 bg-black/40" onClick={onClose} aria-hidden />
       <div
-        className={`relative w-full ${maxWidth} mx-4 rounded-lg shadow-lg overflow-hidden`}
+        className={`relative w-full ${maxWidth} mx-0 overflow-hidden rounded-t-xl shadow-lg sm:mx-4 sm:rounded-lg`}
         style={{ background: "transparent", zIndex: 70, ...(modalStyle ?? {}) }}
       >
         <div style={{ background: "#F7F9FF", borderBottom: "1px solid #E2E8F8" }}>
-          <div className="flex items-center justify-between px-6 py-3 max-w-5xl mx-auto">
+          <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3 sm:px-6">
             <div>
               {title && (
                 <div
-                  className="text-[20px] font-medium"
+                  className="text-[18px] font-medium sm:text-[20px]"
                   style={{ color: "#191F33" }}
                 >
                   {title}
                 </div>
               )}
               {subtitle && (
-                <div className="text-[16px] font-normal" style={{ color: "#5A6480" }}>
+                <div className="text-[14px] font-normal sm:text-[16px]" style={{ color: "#5A6480" }}>
                   {subtitle}
                 </div>
               )}
@@ -72,15 +72,15 @@ export default function Modal({
         </div>
         <div style={{ background: "#FFFFFF" }}>
           <div
-            className={`max-w-5xl mx-auto px-6 py-6 overflow-x-hidden ${bodyClassName ?? ""}`}
-            style={{ maxHeight: "calc(100vh - 180px)", overflowY: "auto", overscrollBehaviorX: "contain" }}
+            className={`max-h-[calc(100vh-220px)] overflow-x-hidden overflow-y-auto px-4 py-4 sm:max-h-[calc(100vh-180px)] sm:px-6 sm:py-6 max-w-5xl mx-auto ${bodyClassName ?? ""}`}
+            style={{ overscrollBehaviorX: "contain" }}
           >
             {children}
           </div>
         </div>
         {footer && (
           <div style={{ background: "#F7F9FF", borderTop: "1px solid #E2E8F8" }}>
-            <div className="max-w-5xl mx-auto px-6 py-4">{footer}</div>
+            <div className="mx-auto max-w-5xl px-4 py-3 sm:px-6 sm:py-4">{footer}</div>
           </div>
         )}
       </div>

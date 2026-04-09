@@ -233,18 +233,18 @@ export function CreateInstructorModal({ open, onClose, onContinue, currentStep =
   }
 
   const footerStep1 = (
-    <div className="grid grid-cols-2 gap-3">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
       <button
         type="button"
         onClick={handleCancel}
-        className="w-full px-4 py-2 rounded-md bg-white border border-gray-200 hover:bg-gray-50 transition-transform duration-150 ease-in-out hover:-translate-y-1 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-indigo-100"
+        className="w-full min-h-11 px-4 py-2 rounded-md bg-white border border-gray-200 hover:bg-gray-50 transition-transform duration-150 ease-in-out hover:-translate-y-1 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-indigo-100"
       >
         Cancelar
       </button>
       <button
         type="button"
         onClick={handleContinueStep}
-        className="w-full px-4 py-2 rounded-md text-white transition-transform duration-150 ease-in-out hover:scale-105 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-[#977CEC]"
+        className="w-full min-h-11 px-4 py-2 rounded-md text-white transition-transform duration-150 ease-in-out hover:scale-105 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-[#977CEC]"
         style={{ background: "#977CEC" }}
       >
         Continuar
@@ -253,11 +253,11 @@ export function CreateInstructorModal({ open, onClose, onContinue, currentStep =
   );
 
   const footerStep2 = (
-    <div className="grid grid-cols-2 gap-3">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
       <button
         type="button"
         onClick={() => setStep(1)}
-        className="w-full px-4 py-2 rounded-md bg-white border border-gray-200 hover:bg-gray-50 transition-transform duration-150 ease-in-out hover:-translate-y-1 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-indigo-100"
+        className="w-full min-h-11 px-4 py-2 rounded-md bg-white border border-gray-200 hover:bg-gray-50 transition-transform duration-150 ease-in-out hover:-translate-y-1 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-indigo-100"
       >
         Voltar
       </button>
@@ -265,7 +265,7 @@ export function CreateInstructorModal({ open, onClose, onContinue, currentStep =
         type="button"
         onClick={handleCreateInstructor}
         disabled={loading}
-        className="w-full px-4 py-2 rounded-md text-white transition-transform duration-150 ease-in-out hover:scale-105 hover:shadow-md disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-[#977CEC]"
+        className="w-full min-h-11 px-4 py-2 rounded-md text-white transition-transform duration-150 ease-in-out hover:scale-105 hover:shadow-md disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-[#977CEC]"
         style={{ background: "#977CEC" }}
       >
         {loading ? "Criando..." : "Criar instrutor"}

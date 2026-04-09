@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Image from "@/components/ui/Image";
 import Link from "@/router/Link";
@@ -1155,3 +1155,6 @@ export function SupportPage() {
     </main>
   );
 }
+
+
+

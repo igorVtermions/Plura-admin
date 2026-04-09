@@ -163,7 +163,7 @@ export function ChatView({
   }, [roomId]);
 
   return (
-    <main className="mx-auto w-full max-w-[1100px] text-md">
+    <main className="mx-auto w-full max-w-[1100px] overflow-x-hidden text-md">
       <header className="mb-4 flex items-center gap-3">
         <button
           onClick={onBack}
@@ -172,14 +172,14 @@ export function ChatView({
         >
           <ChevronLeft className="h-5 w-5" />
         </button>
-        <div>
-          <h1 className="text-xl font-semibold text-[#1F1235]">{roomTitle}</h1>
+        <div className="min-w-0">
+          <h1 className="truncate text-lg font-semibold text-[#1F1235] sm:text-xl">{roomTitle}</h1>
           <p className="text-sm text-[#7A7396]">{roomSubtitle}</p>
         </div>
       </header>
 
-      <div className="flex h-[620px] flex-col rounded-3xl border border-[#E6EBFA] bg-white shadow-[0px_24px_60px_rgba(53,18,87,0.08)]">
-        <section className="flex flex-col items-start justify-between gap-4 rounded-t-3xl border-b border-[#E6EBFA] bg-[#F9FAFF] px-6 py-4 md:flex-row md:items-center">
+      <div className="flex h-[calc(100vh-220px)] min-h-[520px] max-h-[740px] flex-col rounded-2xl sm:rounded-3xl border border-[#E6EBFA] bg-white shadow-[0px_24px_60px_rgba(53,18,87,0.08)]">
+        <section className="flex flex-col items-start justify-between gap-4 rounded-t-2xl sm:rounded-t-3xl border-b border-[#E6EBFA] bg-[#F9FAFF] px-4 py-4 sm:px-6 md:flex-row md:items-center">
           <div className="flex items-center gap-3">
             <div className="h-12 w-12 overflow-hidden rounded-full bg-[#EEF1FF]">
               {owner.avatarUrl && owner.avatarUrl !== "/UserCircle.svg" ? (
@@ -202,7 +202,7 @@ export function ChatView({
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex w-full items-center justify-between gap-4 md:w-auto md:justify-end">
             <span className="text-xs font-medium text-[#6B6F85]">
               {participants.length} online
             </span>
@@ -216,8 +216,8 @@ export function ChatView({
           </div>
         </section>
 
-        <section className="flex min-h-0 flex-1 flex-col px-6 py-4">
-          <div ref={messagesRef} className="flex-1 space-y-6 overflow-y-auto pr-2">
+        <section className="flex min-h-0 flex-1 flex-col px-4 py-4 sm:px-6">
+          <div ref={messagesRef} className="flex-1 space-y-6 overflow-y-auto pr-1 sm:pr-2">
             {messages.map((message, index) => {
               const isOutgoing = message.type === "outgoing";
               const previousMessage = index > 0 ? messages[index - 1] : undefined;
@@ -251,7 +251,7 @@ export function ChatView({
                 >
                   <div
                     className={cn(
-                      "max-w-[70%] rounded-2xl px-4 py-3 text-sm shadow-sm",
+                      "max-w-[85%] sm:max-w-[70%] rounded-2xl px-4 py-3 text-sm shadow-sm",
                       isAdminMessage
                         ? "bg-[#2F9E44] text-white"
                         : isOutgoing
@@ -296,7 +296,7 @@ export function ChatView({
           </div>
         </section>
 
-        <div className="rounded-b-3xl border-t border-[#E6EBFA] bg-[#F9FAFF] px-6 py-4">
+        <div className="rounded-b-2xl sm:rounded-b-3xl border-t border-[#E6EBFA] bg-[#F9FAFF] px-4 py-4 sm:px-6">
           <form
             className="flex items-center gap-3"
             onSubmit={(event) => {

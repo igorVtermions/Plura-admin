@@ -173,21 +173,21 @@ export function SettingsPage() {
   }
 
   return (
-    <main className="min-h-full bg-[#FCFDFF] px-4 py-8 md:px-8">
-      <div className="mx-auto w-full max-w-6xl">
-        <header className="mb-8 rounded-2xl border border-[#E5EAF7] bg-gradient-to-r from-[#F4F0FF] via-[#F8FAFF] to-[#EFF5FF] p-6 md:p-8">
+    <main className="min-h-full overflow-x-hidden bg-[#FCFDFF] px-4 py-6 sm:py-8 md:px-8">
+      <div className="mx-auto w-full max-w-6xl overflow-x-hidden">
+        <header className="mb-6 rounded-2xl border border-[#E5EAF7] bg-gradient-to-r from-[#F4F0FF] via-[#F8FAFF] to-[#EFF5FF] p-5 sm:p-6 md:mb-8 md:p-8">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#6B4DB8]">Painel administrativo</p>
-          <h1 className="mt-3 text-3xl font-semibold text-[#161D31] md:text-4xl">Configuracoes</h1>
+          <h1 className="mt-3 text-[28px] leading-tight font-semibold text-[#161D31] sm:text-3xl md:text-4xl">Configuracoes</h1>
         </header>
 
-        <section className="grid gap-5 md:grid-cols-2">
+        <section className="grid gap-4 sm:gap-5 md:grid-cols-2">
           <Card className="border-[#E5EAF7]">
             <CardHeader>
               <CardTitle className="text-[#1D2742]">Perfil operacional</CardTitle>
               <CardDescription>Edite o nome de exibicao e a foto do admin autenticado.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center gap-4">
+              <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
                 <div className="h-20 w-20 overflow-hidden rounded-full border border-[#D7DEEE] bg-[#F1F4FC]">
                   {profilePreviewUrl || profile.photoUrl ? (
                     <Image src={profilePreviewUrl || profile.photoUrl || ""} alt="Foto do admin" className="h-full w-full object-cover" />
@@ -198,13 +198,13 @@ export function SettingsPage() {
                   )}
                 </div>
 
-                <div className="flex flex-col gap-2">
+                <div className="flex w-full flex-col gap-2 sm:w-auto">
                   <label className="text-xs font-semibold uppercase tracking-wide text-[#6A7698]">Foto de perfil</label>
                   <input
                     type="file"
                     accept="image/png,image/jpeg,image/jpg,image/webp"
                     onChange={(e) => setProfilePhotoFile(e.target.files?.[0] ?? null)}
-                    className="block text-xs text-[#637091] file:mr-3 file:cursor-pointer file:rounded-md file:border file:border-[#D7DEEE] file:bg-white file:px-3 file:py-2"
+                    className="block w-full max-w-full text-xs text-[#637091] file:mr-3 file:mb-2 sm:file:mb-0 file:cursor-pointer file:rounded-md file:border file:border-[#D7DEEE] file:bg-white file:px-3 file:py-2"
                   />
                 </div>
               </div>
@@ -229,7 +229,7 @@ export function SettingsPage() {
                   type="button"
                   onClick={handleSaveProfile}
                   disabled={savingProfile || loadingProfile}
-                  className="bg-[#6B4DB8] text-white hover:bg-[#5A3FB0]"
+                  className="w-full sm:w-auto bg-[#6B4DB8] text-white hover:bg-[#5A3FB0]"
                 >
                   {savingProfile ? "Salvando..." : "Salvar perfil"}
                 </Button>
@@ -332,7 +332,7 @@ export function SettingsPage() {
                   type="button"
                   onClick={handleChangePassword}
                   disabled={changingPassword}
-                  className="bg-[#6B4DB8] text-white hover:bg-[#5A3FB0]"
+                  className="w-full sm:w-auto bg-[#6B4DB8] text-white hover:bg-[#5A3FB0]"
                 >
                   {changingPassword ? "Alterando..." : "Alterar senha"}
                 </Button>

@@ -26,6 +26,7 @@ import {
   LiveChatMessage,
   joinLiveChatRoom,
   leaveLiveChatRoom,
+  deleteLiveChatRoom,
 } from "@/services/network";
 import { fetchAdminRoomReminders, toggleAdminRoomReminder } from "@/services/admin-notifications";
 
@@ -141,7 +142,7 @@ const NoRoom = () => {
 			</div>
 			<h2 className="mt-6 text-2xl font-semibold">Nenhuma sala encontrada</h2>
 			<p className="mt-2 text-[#6C5CAB]">
-				NÃ£o hÃ¡ salas de chat ao vivo disponÃ­veis no momento.
+				Não há salas de chat ao vivo disponíveis no momento.
 			</p>
 		</div>
 	);
@@ -172,7 +173,7 @@ const ContentRooms = ({
 }: ContentRoomsProps) => {
   return (
     <>
-      <div className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="mt-6 grid grid-cols-1 gap-4 sm:mt-8 sm:gap-6 sm:grid-cols-2 xl:grid-cols-3">
         {visibleRooms.map((room) => {
           const startAt = room.startAt ?? undefined;
           const endAt = room.endAt ?? undefined;
@@ -414,7 +415,7 @@ export function NetworkPage() {
       const existingMessages = prev[selectedRoom.id] ?? [];
       const outgoingMessage: LiveChatMessage = {
         id: `${selectedRoom.id}-${Date.now()}`,
-        senderName: "VocÃª",
+        senderName: "Você",
         content: newMessage,
         time: timestamp,
         type: "outgoing",
@@ -433,6 +434,35 @@ export function NetworkPage() {
       // ignore send errors for now
     }
   };
+
+  const handleDeleteRoom = useCallback(async () => {
+    if (!selectedRoom?.id) return;
+    const roomId = selectedRoom.id;
+    try {
+      await deleteLiveChatRoom(roomId);
+      try {
+        await leaveLiveChatRoom(roomId);
+      } catch {
+        // ignore leave errors after deletion
+      }
+      setShowRoomDetails(false);
+      setSelectedRoom(null);
+      setRoomMessages((prev) => {
+        const next = { ...prev };
+        delete next[roomId];
+        return next;
+      });
+      setRoomParticipants((prev) => {
+        const next = { ...prev };
+        delete next[roomId];
+        return next;
+      });
+      reload();
+    } catch (error) {
+      console.error("Erro ao deletar sala", error);
+      window.alert("Não foi possível deletar a sala.");
+    }
+  }, [reload, selectedRoom?.id]);
 
   const selectedRoomMessages = selectedRoom ? roomMessages[selectedRoom.id] ?? [] : [];
   const selectedRoomParticipants = selectedRoom ? roomParticipants[selectedRoom.id] ?? [] : [];
@@ -453,7 +483,7 @@ export function NetworkPage() {
   }, [selectedRoomOnlineUsers]);
 
   return (
-    <div className="min-h-screen bg-white px-6 py-12">
+    <div className="min-h-screen overflow-x-hidden bg-white px-4 py-6 sm:px-6 sm:py-8 lg:py-12">
       {selectedRoom ? (
         <>
           <ChatView
@@ -463,7 +493,7 @@ export function NetworkPage() {
             owner={{
               name: selectedRoom.instructor.name,
               avatarUrl: "/UserCircle.svg",
-              subtitle: selectedRoom.instructor.role ?? "Instrutor responsÃ¡vel",
+              subtitle: selectedRoom.instructor.role ?? "Instrutor responsável",
             }}
             participants={selectedRoomOnlineUsers}
             messages={selectedRoomMessages as ChatMessage[]}
@@ -478,18 +508,19 @@ export function NetworkPage() {
             open={showRoomDetails}
             onClose={() => setShowRoomDetails(false)}
             about={selectedRoom.description ?? "Sem descrição informada."}
-            ageRange="Sem dados"
-            audience="Sem dados"
             onlineCount={selectedRoomOnlineUsers.length}
             users={roomDetailUsers}
+            onDelete={handleDeleteRoom}
           />
         </>
       ) : (
         <>
           <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div className="space-y-1">
-              <h1 className="text-4xl font-semibold text-[#1F1235]">Chat geral</h1>
-              <p className="text-lg text-[#6F6C80]">
+              <h1 className="text-[30px] leading-tight font-semibold text-[#1F1235] sm:text-4xl">
+                Chat geral
+              </h1>
+              <p className="text-base sm:text-lg text-[#6F6C80]">
                 Navegue e gerencie os chats abertos
               </p>
             </div>
@@ -504,7 +535,7 @@ export function NetworkPage() {
             </button>
           </div>
 
-          <div className="mt-10 flex flex-col gap-4 md:flex-row">
+          <div className="mt-6 flex flex-col gap-3 sm:mt-8 md:flex-row md:gap-4">
             <div className="relative w-full md:max-w-md">
               <Input
                 placeholder="Pesquisar por salas"
@@ -563,6 +594,7 @@ export function NetworkPage() {
     </div>
   );
 }
+
 
 
 

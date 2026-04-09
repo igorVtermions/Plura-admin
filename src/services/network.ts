@@ -300,3 +300,46 @@ export const leaveLiveChatRoom = async (roomId: string): Promise<void> => {
     method: "POST",
   });
 };
+
+export const deleteLiveChatRoom = async (roomId: string): Promise<void> => {
+  if (!roomId) return;
+
+  const candidates: Array<() => Promise<unknown>> = [
+    () =>
+      invokeFunction("admin-room-action", {
+        method: "POST",
+        body: { action: "delete", roomId },
+      }),
+    () =>
+      invokeFunction(`user-live-chat-membership?action=admin-delete&roomId=${encodeURIComponent(roomId)}`, {
+        method: "POST",
+        body: { action: "admin-delete", roomId },
+      }),
+    () =>
+      invokeFunction(`users-live-chat-rooms?roomId=${encodeURIComponent(roomId)}`, {
+        method: "DELETE",
+      }),
+    () =>
+      invokeFunction("users-live-chat-rooms", {
+        method: "DELETE",
+        body: { roomId },
+      }),
+    () =>
+      invokeFunction("users-live-chat-rooms", {
+        method: "POST",
+        body: { action: "delete", roomId },
+      }),
+  ];
+
+  let lastError: unknown = null;
+  for (const call of candidates) {
+    try {
+      await call();
+      return;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError ?? new Error("DELETE_ROOM_FAILED");
+};

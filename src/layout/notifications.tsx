@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle, Bell, Clock3, Radio, Ticket } from "lucide-react";
@@ -100,21 +100,18 @@ export function Notifications() {
     }
   }, []);
 
-  const loadNotifications = useCallback(
-    async (options?: { silent?: boolean }) => {
-      const silent = options?.silent ?? false;
-      if (!silent) setLoading(true);
-      try {
-        const response = await fetchAdminNotifications({ page: 1, perPage: 20 });
-        setNotifications(response.items);
-      } catch {
-        if (!silent) setNotifications([]);
-      } finally {
-        if (!silent) setLoading(false);
-      }
-    },
-    [],
-  );
+  const loadNotifications = useCallback(async (options?: { silent?: boolean }) => {
+    const silent = options?.silent ?? false;
+    if (!silent) setLoading(true);
+    try {
+      const response = await fetchAdminNotifications({ page: 1, perPage: 20 });
+      setNotifications(response.items);
+    } catch {
+      if (!silent) setNotifications([]);
+    } finally {
+      if (!silent) setLoading(false);
+    }
+  }, []);
 
   const loadUnreadCount = useCallback(async () => {
     try {
@@ -126,9 +123,7 @@ export function Notifications() {
   }, []);
 
   const syncNewNotifications = useCallback(async () => {
-    const since =
-      syncCursorRef.current ??
-      new Date(Date.now() - 15 * 60 * 1000).toISOString();
+    const since = syncCursorRef.current ?? new Date(Date.now() - 15 * 60 * 1000).toISOString();
     await syncAdminNotifications(50, since);
     updateSyncCursor(new Date().toISOString());
   }, [updateSyncCursor]);
@@ -147,7 +142,7 @@ export function Notifications() {
         setUnreadCount((current) => Math.max(0, current - 1));
       }
     } catch {
-      // ignore mark-read errors on click
+      // ignore mark-read errors
     }
 
     if (notification.entityType === "support_chat" && notification.entityId) {
@@ -172,11 +167,11 @@ export function Notifications() {
     if (!open) return;
     void loadNotifications();
 
-    const refreshId = window.setInterval(() => {
+    const id = window.setInterval(() => {
       void loadNotifications({ silent: true });
     }, 15000);
 
-    return () => window.clearInterval(refreshId);
+    return () => window.clearInterval(id);
   }, [open, loadNotifications]);
 
   useEffect(() => {
@@ -189,33 +184,26 @@ export function Notifications() {
     };
 
     refreshUnread();
+    const id = window.setInterval(refreshUnread, 15000);
 
-    const id = window.setInterval(() => {
+    const onFocus = () => {
       refreshUnread();
-    }, 15000);
-
-    const handleForegroundRefresh = () => {
-      refreshUnread();
-      if (open) {
-        void loadNotifications({ silent: true });
-      }
+      if (open) void loadNotifications({ silent: true });
     };
 
     const onVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
-        handleForegroundRefresh();
-      }
+      if (document.visibilityState === "visible") onFocus();
     };
 
-    window.addEventListener("focus", handleForegroundRefresh);
+    window.addEventListener("focus", onFocus);
     document.addEventListener("visibilitychange", onVisibilityChange);
 
     return () => {
       window.clearInterval(id);
-      window.removeEventListener("focus", handleForegroundRefresh);
+      window.removeEventListener("focus", onFocus);
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
-  }, [open, loadUnreadCount, loadNotifications, syncNewNotifications]);
+  }, [open, loadNotifications, loadUnreadCount, syncNewNotifications]);
 
   useEffect(() => {
     if (!open) setFilter("all");
@@ -245,18 +233,12 @@ export function Notifications() {
 
   const filteredNotifications = useMemo(() => {
     if (filter === "unread") return notifications.filter((item) => !item.read);
-    if (filter === "important") {
-      return notifications.filter((item) => item.severity === "warning" || item.severity === "critical");
-    }
+    if (filter === "important") return notifications.filter((item) => item.severity !== "info");
     return notifications;
   }, [filter, notifications]);
 
   const groupedNotifications = useMemo(() => {
-    const groups: Record<string, AdminNotificationItem[]> = {
-      Hoje: [],
-      Ontem: [],
-      Anteriores: [],
-    };
+    const groups: Record<string, AdminNotificationItem[]> = { Hoje: [], Ontem: [], Anteriores: [] };
 
     filteredNotifications.forEach((item) => {
       const label = groupLabelByDate(item.createdAt);
@@ -285,7 +267,7 @@ export function Notifications() {
         aria-haspopup="true"
         aria-expanded={open}
         aria-controls="notifications-panel"
-        className="relative flex w-10 h-10 p-2 items-center justify-center rounded-lg cursor-pointer"
+        className="relative flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg p-2"
         style={{ border: "1px solid #D0D9F1", background: "#FFFFFF", color: "#191F33" }}
         aria-label="Notificações"
       >
@@ -300,160 +282,169 @@ export function Notifications() {
           />
         </svg>
 
-        {unread ? (
-          <span className="absolute right-1 top-1 block h-2 w-2 rounded-full" style={{ background: "#FF4D4F" }} />
-        ) : (
-          <span className="absolute right-1 top-1 block h-2 w-2 rounded-full" style={{ background: "#FFFFFF" }} aria-hidden />
-        )}
+        <span
+          className="absolute right-1 top-1 block h-2 w-2 rounded-full"
+          style={{ background: unread ? "#FF4D4F" : "#FFFFFF" }}
+          aria-hidden
+        />
       </button>
 
       {open && (
-        <div
-          id="notifications-panel"
-          role="dialog"
-          aria-label="Notificações"
-          className="absolute right-0 mt-2 w-[380px] bg-white rounded-xl shadow-lg border overflow-hidden"
-          style={{ borderColor: "#E6EEF8", zIndex: 60 }}
-        >
-          <div className="p-4 border-b" style={{ borderColor: "#EEF3FC" }}>
-            <div className="flex items-center justify-between gap-3">
-              <div className="text-lg font-semibold text-[#191F33]">Notificações</div>
-              <span className="rounded-full bg-[#EEF2FF] px-2.5 py-1 text-xs font-medium text-[#6B4DB8]">
-                {unreadCount} não lidas
-              </span>
+        <>
+          <button
+            type="button"
+            aria-label="Fechar notificações"
+            onClick={() => setOpen(false)}
+            className="fixed inset-0 z-50 bg-black/25 lg:hidden"
+          />
+
+          <div
+            id="notifications-panel"
+            role="dialog"
+            aria-label="Notificações"
+            className="fixed left-2 right-2 top-[calc(var(--header-height,96px)+8px)] z-[60] max-h-[calc(100vh-var(--header-height,96px)-16px)] overflow-hidden rounded-xl border bg-white shadow-lg sm:left-4 sm:right-4 md:left-auto md:right-4 md:w-[460px] lg:absolute lg:right-0 lg:top-auto lg:mt-2 lg:w-[380px]"
+            style={{ borderColor: "#E6EEF8" }}
+          >
+            <div className="border-b p-4" style={{ borderColor: "#EEF3FC" }}>
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-lg font-semibold text-[#191F33]">Notificações</div>
+                <span className="rounded-full bg-[#EEF2FF] px-2.5 py-1 text-xs font-medium text-[#6B4DB8]">
+                  {unreadCount} não lidas
+                </span>
+              </div>
+
+              <div className="mt-3 flex flex-wrap gap-2">
+                {filterPills.map((pill) => {
+                  const active = filter === pill.key;
+                  return (
+                    <button
+                      key={pill.key}
+                      type="button"
+                      onClick={() => setFilter(pill.key)}
+                      className="rounded-full px-3 py-1.5 text-xs font-medium transition-colors"
+                      style={{
+                        background: active ? "#ECE8FF" : "#F6F8FF",
+                        color: active ? "#6B4DB8" : "#667085",
+                      }}
+                    >
+                      {pill.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
-            <div className="mt-3 flex gap-2">
-              {filterPills.map((pill) => {
-                const active = filter === pill.key;
-                return (
-                  <button
-                    key={pill.key}
-                    type="button"
-                    onClick={() => setFilter(pill.key)}
-                    className="rounded-full px-3 py-1.5 text-xs font-medium transition-colors"
-                    style={{
-                      background: active ? "#ECE8FF" : "#F6F8FF",
-                      color: active ? "#6B4DB8" : "#667085",
-                    }}
-                  >
-                    {pill.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+            <div className="notifications-panel-scroll max-h-[45vh] overflow-y-auto sm:max-h-[50vh] lg:max-h-[360px]">
+              {loading ? (
+                <div className="space-y-3 p-4">
+                  {Array.from({ length: 3 }).map((_, index) => (
+                    <div key={index} className="h-16 animate-pulse rounded-lg" style={{ background: "#F4F7FF" }} />
+                  ))}
+                </div>
+              ) : groupedNotifications.length === 0 ? (
+                <div className="p-6 text-center">
+                  <div className="text-sm font-medium text-[#191F33]">Tudo em dia</div>
+                  <div className="mt-1 text-xs text-[#667085]">Nenhuma notificação para este filtro.</div>
+                </div>
+              ) : (
+                groupedNotifications.map((group) => (
+                  <div key={group.label} className="px-3 pb-2">
+                    <div className="sticky top-0 z-10 bg-white/95 px-1 pb-2 pt-3 text-[11px] font-semibold uppercase tracking-wide text-[#8A94AB] backdrop-blur">
+                      {group.label}
+                    </div>
 
-          <div className="max-h-[360px] overflow-y-auto notifications-panel-scroll">
-            {loading ? (
-              <div className="p-4 space-y-3">
-                {Array.from({ length: 3 }).map((_, index) => (
-                  <div key={index} className="h-16 rounded-lg animate-pulse" style={{ background: "#F4F7FF" }} />
-                ))}
-              </div>
-            ) : groupedNotifications.length === 0 ? (
-              <div className="p-6 text-center">
-                <div className="text-sm font-medium text-[#191F33]">Tudo em dia</div>
-                <div className="text-xs mt-1 text-[#667085]">Nenhuma notificação para este filtro.</div>
-              </div>
-            ) : (
-              groupedNotifications.map((group) => (
-                <div key={group.label} className="px-3 pb-2">
-                  <div className="sticky top-0 z-10 bg-white/95 backdrop-blur px-1 pt-3 pb-2 text-[11px] font-semibold uppercase tracking-wide text-[#8A94AB]">
-                    {group.label}
-                  </div>
+                    <div className="space-y-2">
+                      {group.items.map((notification) => {
+                        const Icon = getNotificationIcon(notification.type, notification.severity);
+                        const isUnread = !notification.read;
 
-                  <div className="space-y-2">
-                    {group.items.map((notification) => {
-                      const Icon = getNotificationIcon(notification.type, notification.severity);
-                      const isUnread = !notification.read;
-
-                      return (
-                        <button
-                          key={notification.id}
-                          type="button"
-                          onClick={() => handleNotificationClick(notification)}
-                          className="w-full text-left rounded-lg border px-3 py-2.5 transition-colors"
-                          style={{
-                            borderColor: isUnread ? "#D7CCFF" : "#E7EDF9",
-                            background: isUnread ? "#F7F3FF" : "#FFFFFF",
-                          }}
-                        >
-                          <div className="flex items-start gap-2.5">
-                            <div className="mt-0.5 rounded-md p-1.5" style={{ background: isUnread ? "#ECE4FF" : "#F2F4FA" }}>
-                              <Icon className="h-4 w-4 text-[#6B4DB8]" />
-                            </div>
-
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center justify-between gap-2">
-                                <div className="text-sm font-semibold text-[#191F33] leading-5">{notification.title}</div>
-                                {isUnread && <span className="h-2 w-2 rounded-full bg-[#7A5CE3]" />}
+                        return (
+                          <button
+                            key={notification.id}
+                            type="button"
+                            onClick={() => handleNotificationClick(notification)}
+                            className="w-full rounded-lg border px-3 py-2.5 text-left transition-colors"
+                            style={{
+                              borderColor: isUnread ? "#D7CCFF" : "#E7EDF9",
+                              background: isUnread ? "#F7F3FF" : "#FFFFFF",
+                            }}
+                          >
+                            <div className="flex items-start gap-2.5">
+                              <div className="mt-0.5 rounded-md p-1.5" style={{ background: isUnread ? "#ECE4FF" : "#F2F4FA" }}>
+                                <Icon className="h-4 w-4 text-[#6B4DB8]" />
                               </div>
 
-                              {notification.body && (
-                                <div
-                                  className="text-xs mt-0.5 text-[#5A6480] leading-4"
-                                  style={{
-                                    display: "-webkit-box",
-                                    WebkitLineClamp: 2,
-                                    WebkitBoxOrient: "vertical",
-                                    overflow: "hidden",
-                                  }}
-                                >
-                                  {notification.body}
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center justify-between gap-2">
+                                  <div className="leading-5 text-sm font-semibold text-[#191F33]">{notification.title}</div>
+                                  {isUnread && <span className="h-2 w-2 rounded-full bg-[#7A5CE3]" />}
                                 </div>
-                              )}
 
-                              <div className="text-[11px] mt-1.5 text-[#8A94AB]">{formatRelativeDate(notification.createdAt)}</div>
+                                {notification.body && (
+                                  <div
+                                    className="mt-0.5 text-xs leading-4 text-[#5A6480]"
+                                    style={{
+                                      display: "-webkit-box",
+                                      WebkitLineClamp: 2,
+                                      WebkitBoxOrient: "vertical",
+                                      overflow: "hidden",
+                                    }}
+                                  >
+                                    {notification.body}
+                                  </div>
+                                )}
+
+                                <div className="mt-1.5 text-[11px] text-[#8A94AB]">{formatRelativeDate(notification.createdAt)}</div>
+                              </div>
                             </div>
-                          </div>
-                        </button>
-                      );
-                    })}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              ))
-            )}
-          </div>
+                ))
+              )}
+            </div>
 
-          <div className="p-2.5 border-t" style={{ borderColor: "#EEF3FC" }}>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                disabled={unreadCount === 0}
-                onClick={async () => {
-                  try {
-                    await markAllAdminNotificationsRead();
-                    setNotifications((cur) =>
-                      cur.map((x) => ({
-                        ...x,
-                        read: true,
-                        readAt: x.readAt ?? new Date().toISOString(),
-                      })),
-                    );
-                    setUnreadCount(0);
-                  } catch {
-                    // ignore mark-all errors
-                  }
-                }}
-                className="w-full rounded-md py-2 text-sm font-medium transition-colors disabled:opacity-50"
-                style={{ color: "#6B4DB8", background: "#F8F5FF" }}
-              >
-                Marcar lidas
-              </button>
+            <div className="border-t p-2.5" style={{ borderColor: "#EEF3FC" }}>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <button
+                  type="button"
+                  disabled={unreadCount === 0}
+                  onClick={async () => {
+                    try {
+                      await markAllAdminNotificationsRead();
+                      setNotifications((cur) =>
+                        cur.map((x) => ({
+                          ...x,
+                          read: true,
+                          readAt: x.readAt ?? new Date().toISOString(),
+                        })),
+                      );
+                      setUnreadCount(0);
+                    } catch {
+                      // ignore
+                    }
+                  }}
+                  className="w-full rounded-md py-2 text-sm font-medium transition-colors disabled:opacity-50"
+                  style={{ color: "#6B4DB8", background: "#F8F5FF" }}
+                >
+                  Marcar lidas
+                </button>
 
-              <button
-                type="button"
-                disabled={notifications.length === 0}
-                onClick={() => setConfirmClearOpen(true)}
-                className="w-full rounded-md py-2 text-sm font-medium transition-colors disabled:opacity-50"
-                style={{ color: "#C53030", background: "#FFF4F4" }}
-              >
-                Limpar caixa
-              </button>
+                <button
+                  type="button"
+                  disabled={notifications.length === 0}
+                  onClick={() => setConfirmClearOpen(true)}
+                  className="w-full rounded-md py-2 text-sm font-medium transition-colors disabled:opacity-50"
+                  style={{ color: "#C53030", background: "#FFF4F4" }}
+                >
+                  Limpar caixa
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        </>
       )}
 
       <Modal
@@ -486,7 +477,7 @@ export function Notifications() {
                   updateSyncCursor(new Date().toISOString());
                   setConfirmClearOpen(false);
                 } catch {
-                  // ignore clear-all errors
+                  // ignore
                 } finally {
                   setClearLoading(false);
                 }

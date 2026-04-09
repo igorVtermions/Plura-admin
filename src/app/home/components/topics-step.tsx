@@ -20,7 +20,7 @@ export function TopicsStep(
   return (
     <div className="w-full" ref={ref}>
       <div className="w-full mt-2">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {topics.map((key) => {
             const label = labelMap[key] || key;
             const active = selected.includes(key);
@@ -48,3 +48,4 @@ export function TopicsStep(
 }
 
 export const ForwardedStep2Topics = React.forwardRef<HTMLDivElement, Props>(TopicsStep);
+

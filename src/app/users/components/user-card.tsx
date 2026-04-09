@@ -56,12 +56,6 @@ export function UserCard({
   const banLabel = isBanning ? "Banindo..." : "Banir usuário";
   const unbanLabel = isUnbanning ? "Desbanindo..." : "Desbanir usuário";
 
-  const handleBanClick = () => {
-    if (isBanDisabled || !onBan) return;
-    onBan(user.id);
-    setMenuOpen(false);
-  };
-
   const openBanConfirm = () => {
     if (isBanDisabled) return;
     setMenuOpen(false);
@@ -117,15 +111,12 @@ export function UserCard({
 
   return (
     <article
-      className="relative flex w-full max-w-[362px] flex-col overflow-hidden rounded-[22px] border border-transparent bg-white h-[282px] cursor-pointer"
+      className="relative flex w-full max-w-full flex-col overflow-hidden rounded-[22px] border border-transparent bg-white min-h-[282px] cursor-pointer"
       onClick={handleCardClick}
     >
-      <div
-        className="absolute inset-x-0 top-0 z-0 h-14"
-        style={{ backgroundColor: meta.headerColor }}
-      />
+      <div className="absolute inset-x-0 top-0 z-0 h-14" style={{ backgroundColor: meta.headerColor }} />
 
-      <div ref={menuRef} className="absolute right-5 z-20" style={{ top: 50 }}>
+      <div ref={menuRef} className="absolute right-4 top-10 z-20 sm:right-5 sm:top-[50px]">
         <div className="relative">
           <button
             type="button"
@@ -197,7 +188,7 @@ export function UserCard({
 
       <div
         className={cn(
-          "absolute left-5 top-4 z-10 flex h-20 w-20 items-center justify-center overflow-hidden border-[3px] rounded-[18px]",
+          "absolute left-4 top-4 z-10 flex h-16 w-16 items-center justify-center overflow-hidden border-[3px] rounded-[16px] sm:left-5 sm:h-20 sm:w-20 sm:rounded-[18px]",
           hasAvatar ? "bg-white/80" : "bg-[#F4F6FF]",
         )}
         style={{
@@ -214,16 +205,16 @@ export function UserCard({
             className="h-full w-full object-cover"
           />
         ) : (
-          <UserIcon className="h-10 w-10 text-[#9BA3BC]" strokeWidth={1.6} />
+          <UserIcon className="h-8 w-8 text-[#9BA3BC] sm:h-10 sm:w-10" strokeWidth={1.6} />
         )}
       </div>
 
-      <div className="relative z-10 flex flex-1 flex-col px-5 pb-4 pt-[7.25rem]">
+      <div className="relative z-10 flex flex-1 flex-col px-4 pb-4 pt-[6.15rem] sm:px-5 sm:pt-[7.25rem]">
         <div className="space-y-1">
           <h3 className="text-[15px] font-semibold leading-tight" style={{ color: meta.nameColor }}>
             {user.name}
           </h3>
-          <p className="text-sm font-medium" style={{ color: meta.handleColor }}>
+          <p className="text-sm font-medium break-all" style={{ color: meta.handleColor }}>
             {displayHandle}
           </p>
         </div>
@@ -258,7 +249,7 @@ export function UserCard({
         title={confirmTitle}
         subtitle={confirmSubtitle}
         footer={
-          <div className="flex justify-end gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:flex sm:justify-end">
             <Button
               variant="outline"
               onClick={() => setConfirmAction(null)}
@@ -281,21 +272,4 @@ export function UserCard({
       </Modal>
     </article>
   );
-}
-
-function formatDate(value: string): string {
-  if (!value) return "Data desconhecida";
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-
-  return date.toLocaleString("pt-BR", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 }

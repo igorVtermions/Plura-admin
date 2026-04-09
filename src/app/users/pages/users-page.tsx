@@ -149,16 +149,16 @@ export function UsersPage() {
   };
 
   return (
-    <main className="min-h-screen bg-white">
-      <div className="mx-auto w-full max-w-6xl px-6 py-10">
-        <header className="mb-8 space-y-6">
+    <main className="min-h-screen overflow-x-hidden bg-white">
+      <div className="mx-auto w-full max-w-6xl overflow-x-hidden px-4 py-6 sm:px-6 sm:py-8 lg:py-10">
+        <header className="mb-6 space-y-5 sm:mb-8 sm:space-y-6">
           <div className="space-y-1">
-            <h1 className="text-[28px] font-semibold text-[#191F33]">Usuários</h1>
+            <h1 className="text-[24px] font-semibold text-[#191F33] sm:text-[28px]">Usuários</h1>
             <p className="text-sm text-[#5A6480]">Ver todos usuários</p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="relative flex-1 min-w-[220px] max-w-sm">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:flex lg:flex-wrap lg:items-center lg:gap-4">
+            <div className="relative w-full lg:min-w-[220px] lg:max-w-sm lg:flex-1">
               <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#5A6480]" />
               <Input
                 value={searchInput}
@@ -171,7 +171,7 @@ export function UsersPage() {
             <select
               value={filter}
               onChange={(event) => setFilter(event.currentTarget.value as FilterKey)}
-              className="h-11 rounded-xl border border-[#D0D9F1] bg-white px-4 text-sm text-[#191F33] focus:outline-none focus:ring-2 focus:ring-[#977CEC]"
+              className="h-11 w-full rounded-xl border border-[#D0D9F1] bg-white px-4 text-sm text-[#191F33] focus:outline-none focus:ring-2 focus:ring-[#977CEC] sm:w-auto"
             >
               {TABS.map((tab) => (
                 <option key={tab.key} value={tab.key}>
@@ -180,13 +180,13 @@ export function UsersPage() {
               ))}
             </select>
 
-            <div className="px-4 py-2 text-sm font-normal" style={{ color: "#808DB2" }}>
+            <div className="px-1 py-2 text-sm font-normal sm:px-4" style={{ color: "#808DB2" }}>
               {totalLabel}
             </div>
           </div>
 
-          <nav className="mt-4 flex w-full overflow-hidden rounded-full border border-[#D5DDF5] bg-white">
-            {TABS.map((tab, index) => {
+          <nav className="mt-2 grid w-full grid-cols-2 gap-2 sm:flex sm:items-center sm:gap-2">
+            {TABS.map((tab) => {
               const active = filter === tab.key;
               return (
                 <button
@@ -196,9 +196,7 @@ export function UsersPage() {
                   aria-label={`Filtrar por ${tab.label.toLowerCase()}`}
                   aria-pressed={active}
                   className={cn(
-                    "flex-1 px-6 py-2 text-sm font-medium text-[#5A6480] transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#977CEC] focus-visible:ring-offset-0",
-                    index === 0 && "rounded-l-full",
-                    index === TABS.length - 1 && "rounded-r-full",
+                    "w-full whitespace-nowrap rounded-full border border-[#D5DDF5] px-4 py-2 text-sm font-medium text-[#5A6480] transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#977CEC] focus-visible:ring-offset-0 sm:w-auto sm:px-5",
                     active ? "bg-[#EEF2FF] text-[#2E3A63]" : "bg-white hover:bg-[#F7F9FF]",
                   )}
                 >
@@ -209,12 +207,12 @@ export function UsersPage() {
           </nav>
         </header>
 
-        <section className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+        <section className="grid overflow-x-hidden gap-4 sm:gap-6 sm:grid-cols-2 xl:grid-cols-3">
           {loading && users.length === 0
             ? Array.from({ length: Math.min(perPage, 6) }, (_, index) => (
                 <div
                   key={`skeleton-${index}`}
-                  className="h-[282px] w-full max-w-[362px] animate-pulse rounded-[22px] border border-[#E6EBFA] bg-[#F8FAFF]"
+                  className="h-[282px] w-full animate-pulse rounded-[22px] border border-[#E6EBFA] bg-[#F8FAFF]"
                 />
               ))
             : users.map((user: UserCardUser) => (
@@ -300,7 +298,7 @@ function Pagination({
   const nextDisabled = disabled || page === totalPages;
 
   return (
-    <div className="mt-10 flex items-center justify-center">
+    <div className="mt-8 flex items-center justify-center sm:mt-10">
       <div className="flex items-center">
         <button
           type="button"
@@ -314,17 +312,11 @@ function Pagination({
             opacity: prevDisabled ? 0.5 : 1,
           }}
         >
-          <Image
-            src="/Arrow.svg"
-            alt="Anterior"
-            width={13}
-            height={13}
-            className="object-contain"
-          />
+          <Image src="/Arrow.svg" alt="Anterior" width={13} height={13} className="object-contain" />
         </button>
 
         <div
-          className="users-pagination-scroll mx-4 flex items-center gap-2 overflow-x-auto md:mx-6"
+          className="users-pagination-scroll mx-2 flex items-center gap-2 overflow-x-auto sm:mx-4 md:mx-6"
           style={{ scrollBehavior: "smooth" }}
         >
           {pages.map((p) => (
@@ -341,7 +333,7 @@ function Pagination({
               style={{
                 borderColor: "#D0D9F1",
                 color: p === page ? "#191F33" : "#7682A5",
-                minWidth: 44,
+                minWidth: 40,
               }}
             >
               {p}
