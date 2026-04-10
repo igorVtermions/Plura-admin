@@ -1,0 +1,76 @@
+# Refactor Plan for Supabase Functions
+
+This document tracks the refactoring progress for all Supabase functions.
+
+## To-Do
+
+- [x] `_shared`
+- [x] `chat`
+- [x] `create-private-chat`
+- [x] `get-follow-stats`
+- [x] `list-live-chat-room-by-tutor`
+- [x] `list-private-messages`
+- [x] `live-chat-membership`
+- [x] `live-chat-room`
+- [x] `migrate-passwords`
+- [x] `notification`
+- [x] `pre-register`
+- [x] `register`
+- [ ] `relation-status`
+- [ ] `report-problem-by-tutor`
+- [ ] `report-user-by-tutor`
+- [ ] `resend-pin`
+- [ ] `respond-friend-request`
+- [ ] `room-admin`
+- [ ] `room-history`
+- [ ] `send-pin`
+- [ ] `send-private-message`
+- [ ] `set-password`
+- [ ] `sync-auth`
+- [ ] `tutor`
+- [ ] `tutor-follow`
+- [ ] `tutor-forgot-password`
+- [ ] `tutor-login`
+- [ ] `tutor-notifications`
+- [ ] `tutor-photo`
+- [ ] `tutor-report-user`
+- [ ] `tutor-reset-password`
+- [ ] `tutor-topics`
+- [ ] `tutor-verify-reset-pin`
+- [ ] `tutors-delete-account`
+- [ ] `tutors-live-chat-rooms`
+- [ ] `tutors-me`
+- [ ] `tutors-search-users`
+- [ ] `tutors-topics`
+- [ ] `tutors-update`
+- [ ] `update-topics`
+- [ ] `user-auth`
+- [ ] `user-contact`
+- [ ] `user-delete-account`
+- [ ] `user-follow`
+- [ ] `user-friend-request`
+- [ ] `user-list-live-chat-rooms`
+- [ ] `user-live-chat-membership`
+- [ ] `user-notifications`
+- [ ] `user-photo`
+- [ ] `user-profile`
+- [ ] `user-realtime-access`
+- [ ] `user-remove-photo`
+- [ ] `user-report-problem`
+- [ ] `user-report-user`
+- [ ] `user-tutor-follow`
+- [ ] `user-tutor-list`
+- [ ] `user-update-profile`
+- [ ] `users-auth-google`
+- [ ] `users-forgot-password`
+- [ ] `users-live-chat-rooms`
+- [ ] `users-live-chat-rooms-participants`
+- [ ] `users-login`
+- [ ] `users-me`
+- [ ] `users-reset-password`
+- [ ] `users-send-pin`
+- [ ] `users-set-password`
+- [ ] `users-tutors-follow-stats`
+- [ ] `users-users`
+- [ ] `users-verify-reset-pin`
+- [ ] `verify-pin`

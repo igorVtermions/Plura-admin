@@ -1,0 +1,55 @@
+
+  
+   ID                                   | NAME                               | SLUG                               | STATUS | VERSION | UPDATED_AT (UTC)    
+  --------------------------------------|------------------------------------|------------------------------------|--------|---------|---------------------
+   1b988494-fd64-4f2d-a2cc-ff872e808b98 | users-login                        | users-login                        | ACTIVE | 12      | 2025-12-03 16:54:33 
+   ccb7355e-9656-47df-a0ba-fdd6ffc93be7 | users-auth-google                  | users-auth-google                  | ACTIVE | 10      | 2025-12-02 18:42:32 
+   c8f463f1-e25c-4865-9c21-1f9809af99f8 | sync-auth                          | sync-auth                          | ACTIVE | 7       | 2025-12-02 13:55:15 
+   5454fd53-c974-4397-a7b1-9d657c5de77b | migrate-passwords                  | migrate-passwords                  | ACTIVE | 4       | 2025-12-02 14:05:26 
+   1eaa4700-797c-4ccf-b2a3-844d2091c335 | users-me                           | users-me                           | ACTIVE | 14      | 2025-12-04 20:31:52 
+   5749dfa7-0c6c-4bdf-a853-57ad6e35174d | users-live-chat-rooms              | users-live-chat-rooms              | ACTIVE | 9       | 2025-12-02 18:58:10 
+   c6d8e87e-2e51-4d5e-bcd2-32f5c72086c4 | users-notifications                | users-notifications                | ACTIVE | 9       | 2025-12-02 18:58:37 
+   ca650521-ecd2-48e6-9b5a-43b1b083ccf5 | users-live-chat-rooms-participants | users-live-chat-rooms-participants | ACTIVE | 8       | 2025-12-02 18:58:25 
+   9c8dff9b-eb5b-4427-9ae8-1d8fe26048a0 | users-users                        | users-users                        | ACTIVE | 11      | 2025-12-02 19:07:57 
+   4d1544c1-1c9e-4c1a-a331-d2c2cf8c7842 | users-forgot-password              | users-forgot-password              | ACTIVE | 8       | 2025-12-03 16:19:39 
+   44c57c42-5c57-42dc-8071-95e8b5ea6ae5 | users-send-pin                     | users-send-pin                     | ACTIVE | 4       | 2025-12-02 19:19:52 
+   e57b9e96-a289-458d-97bc-7528fa638247 | users-verify-reset-pin             | users-verify-reset-pin             | ACTIVE | 6       | 2025-12-03 16:25:32 
+   c6baf22b-4640-4c06-9aa7-a34317c642a8 | users-reset-password               | users-reset-password               | ACTIVE | 12      | 2025-12-03 16:32:26 
+   a2cbfe80-e740-4f35-aeaa-7be9e7bf279a | users-set-password                 | users-set-password                 | ACTIVE | 4       | 2025-12-02 19:21:08 
+   e9b362ca-d4c1-4b77-a944-353e78842ff0 | tutor                              | tutor                              | ACTIVE | 7       | 2025-12-04 20:02:18 
+   b2151e15-ed54-4129-82a9-e0599a107f47 | list-live-chat-room-by-tutor       | list-live-chat-room-by-tutor       | ACTIVE | 7       | 2025-12-04 20:01:54 
+   b22f6c34-619f-4483-a1a6-db025371ca90 | live-chat-membership               | live-chat-membership               | ACTIVE | 7       | 2025-12-04 20:01:57 
+   602f4628-525b-4755-9f60-fe2da5908ca5 | live-chat-room                     | live-chat-room                     | ACTIVE | 7       | 2025-12-04 20:02:00 
+   0c961ac2-dede-4da5-a95c-8664e6e88305 | report-problem-by-tutor            | report-problem-by-tutor            | ACTIVE | 7       | 2025-12-04 20:02:06 
+   22a5c196-7001-437f-bc01-08e32ef88e2a | report-user-by-tutor               | report-user-by-tutor               | ACTIVE | 7       | 2025-12-04 20:02:09 
+   a9d68ace-c94d-4dd9-a302-6b1caa63965e | room-admin                         | room-admin                         | ACTIVE | 7       | 2025-12-04 20:02:12 
+   6f564e2b-12d7-4fe4-bfa0-e2a2094ceaf5 | room-history                       | room-history                       | ACTIVE | 7       | 2025-12-04 20:02:15 
+   4a8a3778-7d31-4d18-b89a-7304ca8b89cd | tutor-follow                       | tutor-follow                       | ACTIVE | 7       | 2025-12-04 20:02:21 
+   5222a9d4-1da3-4d7f-bcaf-40dc674043de | tutor-photo                        | tutor-photo                        | ACTIVE | 7       | 2025-12-04 20:02:24 
+   9aceb619-4ab4-458a-be00-d91a5c2facac | tutor-topics                       | tutor-topics                       | ACTIVE | 7       | 2025-12-04 20:02:26 
+   730cc50f-8861-4e5b-8fb9-0a84bfbe2dfc | pre-register                       | pre-register                       | ACTIVE | 2       | 2025-12-03 17:00:31 
+   2884973a-06b2-40f2-af65-d1ea33d78258 | register                           | register                           | ACTIVE | 7       | 2025-12-04 18:49:55 
+   c724c00f-ec56-4808-ab25-32fb5afebdbd | resend-pin                         | resend-pin                         | ACTIVE | 3       | 2025-12-03 19:42:38 
+   aa25069e-c53b-45ea-9705-06a616d9b9f5 | send-pin                           | send-pin                           | ACTIVE | 5       | 2025-12-03 19:42:23 
+   2a21f811-2969-496b-8ae0-81258de5df4f | verify-pin                         | verify-pin                         | ACTIVE | 2       | 2025-12-03 17:02:13 
+   8ed8b4d0-e5bd-44e6-9aa6-8b53d9217b47 | set-password                       | set-password                       | ACTIVE | 3       | 2025-12-04 18:50:06 
+   06540d88-d31f-40f8-9f9d-fccd5db58f99 | update-topics                      | update-topics                      | ACTIVE | 2       | 2025-12-03 17:05:46 
+   f4569d36-00ee-4e52-b6ce-50acc02c13aa | chat                               | chat                               | ACTIVE | 4       | 2025-12-04 20:01:51 
+   f30512d3-ec34-4676-b4b7-029c0d137192 | notification                       | notification                       | ACTIVE | 4       | 2025-12-04 20:02:03 
+   7d6f009f-ca79-48db-a5de-b1d5e56a3525 | user-auth                          | user-auth                          | ACTIVE | 3       | 2025-12-04 20:02:30 
+   c3ca6eab-60cd-4f9a-9609-3d026a6db025 | user-contact                       | user-contact                       | ACTIVE | 3       | 2025-12-04 20:02:33 
+   82223480-c482-4c44-b165-8c8bd3477029 | user-delete-account                | user-delete-account                | ACTIVE | 4       | 2025-12-05 18:33:38 
+   c127e30a-6453-497b-96bf-9c96f50959b3 | user-follow                        | user-follow                        | ACTIVE | 3       | 2025-12-04 20:02:39 
+   57c4e2e9-d170-4a46-8055-d832c25f032f | user-friend-request                | user-friend-request                | ACTIVE | 3       | 2025-12-04 20:02:42 
+   57513d06-1d89-42b3-8f92-cf641985cbc6 | user-list-live-chat-rooms          | user-list-live-chat-rooms          | ACTIVE | 3       | 2025-12-04 20:02:45 
+   4b005449-c32b-4425-b982-1781e1a9e5db | user-live-chat-membership          | user-live-chat-membership          | ACTIVE | 3       | 2025-12-04 20:02:48 
+   deb2ecf1-29b7-4a92-97f6-e9e9cf414abd | user-photo                         | user-photo                         | ACTIVE | 5       | 2025-12-05 13:48:50 
+   dfb57260-9b04-4868-9539-4144d86fd474 | user-profile                       | user-profile                       | ACTIVE | 8       | 2025-12-05 17:08:04 
+   d1593963-14eb-4115-b1be-8ed571c5e2fc | user-realtime-access               | user-realtime-access               | ACTIVE | 3       | 2025-12-04 20:02:57 
+   23cd04d5-ee0c-4db4-8803-81d62b412e53 | user-report-problem                | user-report-problem                | ACTIVE | 4       | 2025-12-05 17:25:44 
+   8cefba9b-ae91-4850-89a8-b98e2712e6b9 | user-report-user                   | user-report-user                   | ACTIVE | 5       | 2025-12-05 17:13:59 
+   36722b65-869a-4368-a178-dd29a9bb9645 | user-tutor-follow                  | user-tutor-follow                  | ACTIVE | 3       | 2025-12-04 20:03:06 
+   55e86230-371e-45a1-9605-8b78dea6f617 | user-tutor-list                    | user-tutor-list                    | ACTIVE | 3       | 2025-12-04 20:03:09 
+   1c78351a-b9cf-4e62-92eb-fa43326e72d4 | user-update-profile                | user-update-profile                | ACTIVE | 2       | 2025-12-04 21:47:25 
+   61ebe8f6-5917-49c4-be81-f92f759568e2 | user-remove-photo                  | user-remove-photo                  | ACTIVE | 2       | 2025-12-05 13:00:08 
+

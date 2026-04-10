@@ -1,6 +1,5 @@
 @import "tailwindcss";
 
-/* Tokens base no padrão shadcn para Tailwind v4 */
 :root {
   --background: 0 0% 100%;
   --foreground: 240 10% 3.9%;
@@ -14,10 +13,10 @@
   --card: 0 0% 100%;
   --card-foreground: 240 10% 3.9%;
 
-  --border: 240 5.9% 90%;
-  --input: 240 5.9% 90%;
+  --border: 252 100% 97%;
+  --input: 252 100% 97%;
 
-  --primary: 240 5.9% 10%;
+  --primary: 255 74% 71%;
   --primary-foreground: 0 0% 98%;
 
   --secondary: 240 4.8% 95.9%;
@@ -29,7 +28,7 @@
   --destructive: 0 72.2% 50.6%;
   --destructive-foreground: 0 0% 98%;
 
-  --ring: 240 5.9% 10%;
+  --ring: 255 74% 71%;
   --radius: 0.5rem;
 }
 
@@ -92,6 +91,109 @@
 * {
   @apply border-border;
 }
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+html, body, #__next {
+  height: 100%;
+}
 body {
+  margin: 0;
+  min-height: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   @apply bg-background text-foreground;
+
+  display: flex;
+  flex-direction: column;
+}
+#\__next {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* Global page transition for paginated grids */
+.page-transition { animation: pageFade 320ms cubic-bezier(.22,.9,.32,1); }
+@keyframes pageFade {
+  from { opacity: 0; transform: translateY(12px) scale(0.995); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Scrollbar customizado para o modal de cadastro de instrutor */
+.instructor-modal-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #9b84ec #eef2ff;
+}
+
+.instructor-modal-scroll::-webkit-scrollbar {
+  width: 10px;
+}
+
+.instructor-modal-scroll::-webkit-scrollbar-track {
+  background: linear-gradient(180deg, #f4f6ff 0%, #eef2ff 100%);
+  border-radius: 9999px;
+}
+
+.instructor-modal-scroll::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #ad9af1 0%, #8c72e6 100%);
+  border: 2px solid #eef2ff;
+  border-radius: 9999px;
+}
+
+.instructor-modal-scroll::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #9d88ef 0%, #7f64df 100%);
+}
+
+/* Scrollbar customizado para o modal de criar sessão */
+.session-modal-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #9b84ec #eef2ff;
+}
+
+.session-modal-scroll::-webkit-scrollbar {
+  width: 10px;
+}
+
+.session-modal-scroll::-webkit-scrollbar-track {
+  background: linear-gradient(180deg, #f4f6ff 0%, #eef2ff 100%);
+  border-radius: 9999px;
+}
+
+.session-modal-scroll::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #ad9af1 0%, #8c72e6 100%);
+  border: 2px solid #eef2ff;
+  border-radius: 9999px;
+}
+
+.session-modal-scroll::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #9d88ef 0%, #7f64df 100%);
+}
+
+/* Scrollbar da aba de notificacoes reutiliza o visual dos modais */
+.notifications-panel-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #9b84ec #eef2ff;
+}
+
+.notifications-panel-scroll::-webkit-scrollbar {
+  width: 10px;
+}
+
+.notifications-panel-scroll::-webkit-scrollbar-track {
+  background: linear-gradient(180deg, #f4f6ff 0%, #eef2ff 100%);
+  border-radius: 9999px;
+}
+
+.notifications-panel-scroll::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #ad9af1 0%, #8c72e6 100%);
+  border: 2px solid #eef2ff;
+  border-radius: 9999px;
+}
+
+.notifications-panel-scroll::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #9d88ef 0%, #7f64df 100%);
 }
