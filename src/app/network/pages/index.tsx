@@ -7,7 +7,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { Plus, Search } from "lucide-react";
+import { MessageCircle, Plus, Radio, Search } from "lucide-react";
 import { useMemo, useState, useEffect, useCallback, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { CreateSessionModal } from "@/app/home/components/create-session-modal";
@@ -27,10 +27,17 @@ import {
   joinLiveChatRoom,
   leaveLiveChatRoom,
   deleteLiveChatRoom,
+  deleteLiveChatRoomMessage,
+  deleteTopicChatMessage,
+  fetchTopicChatMessages,
+  fetchTopicChatUserProfile,
+  fetchTopicChats,
+  TopicChat,
 } from "@/services/network";
 import { fetchAdminRoomReminders, toggleAdminRoomReminder } from "@/services/admin-notifications";
 
 const PAGE_SIZE = 6;
+type NetworkViewMode = "live" | "topics";
 
 function toValidDate(value?: string | null) {
   if (!value) return null;
@@ -251,11 +258,40 @@ export function NetworkPage() {
     reload,
   } = useNetworkPage();
   const [selectedRoom, setSelectedRoom] = useState<LiveChatRoom | null>(null);
+  const [viewMode, setViewMode] = useState<NetworkViewMode>("live");
+  const [topicChats, setTopicChats] = useState<TopicChat[]>([]);
+  const [topicsLoading, setTopicsLoading] = useState(false);
+  const [topicsError, setTopicsError] = useState<string | null>(null);
+  const [selectedTopicChat, setSelectedTopicChat] = useState<TopicChat | null>(null);
+  const [topicMessages, setTopicMessages] = useState<Record<string, LiveChatMessage[]>>({});
   const [roomMessages, setRoomMessages] = useState<Record<string, LiveChatMessage[]>>({});
   const [roomParticipants, setRoomParticipants] = useState<Record<string, Participant[]>>({});
   const [showRoomDetails, setShowRoomDetails] = useState(false);
   const [reminders, setReminders] = useState<Record<string, boolean>>({});
   const [openCreateSession, setOpenCreateSession] = useState(false);
+
+  useEffect(() => {
+    if (viewMode !== "topics") return;
+    let active = true;
+    setTopicsLoading(true);
+    setTopicsError(null);
+    void fetchTopicChats()
+      .then((items) => {
+        if (!active) return;
+        setTopicChats(items);
+      })
+      .catch(() => {
+        if (!active) return;
+        setTopicChats([]);
+        setTopicsError("Falha ao buscar os chats de topicos.");
+      })
+      .finally(() => {
+        if (active) setTopicsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [viewMode]);
 
   useEffect(() => {
     let active = true;
@@ -321,6 +357,20 @@ export function NetworkPage() {
     })();
   }, []);
 
+  const handleJoinTopicChat = useCallback((topic: TopicChat) => {
+    setSelectedTopicChat(topic);
+    void fetchTopicChatMessages(topic.roomId)
+      .then((messagesList) => {
+        setTopicMessages((prev) => ({
+          ...prev,
+          [topic.roomId]: messagesList,
+        }));
+      })
+      .catch(() => {
+        setTopicMessages((prev) => ({ ...prev, [topic.roomId]: [] }));
+      });
+  }, []);
+
   useEffect(() => {
     const state = location.state as { roomId?: string } | null;
     const params = new URLSearchParams(location.search);
@@ -370,6 +420,34 @@ export function NetworkPage() {
         window.clearInterval(intervalId);
       };
     }, [selectedRoom?.id]);
+
+    useEffect(() => {
+      if (!selectedTopicChat?.roomId) return;
+      const roomId = selectedTopicChat.roomId;
+      let isMounted = true;
+
+      const refreshMessages = async () => {
+        try {
+          const messagesList = await fetchTopicChatMessages(roomId);
+          if (!isMounted) return;
+          setTopicMessages((prev) => ({
+            ...prev,
+            [roomId]: messagesList,
+          }));
+        } catch {
+          // ignore polling errors
+        }
+      };
+
+      const intervalId = window.setInterval(() => {
+        void refreshMessages();
+      }, 2500);
+
+      return () => {
+        isMounted = false;
+        window.clearInterval(intervalId);
+      };
+    }, [selectedTopicChat?.roomId]);
 
     useEffect(() => {
       if (!selectedRoom?.id) return;
@@ -435,6 +513,70 @@ export function NetworkPage() {
     }
   };
 
+  const handleDeleteMessage = useCallback(async (message: LiveChatMessage) => {
+    if (!selectedRoom?.id || !message?.id) return;
+    const roomId = selectedRoom.id;
+    setRoomMessages((prev) => ({
+      ...prev,
+      [roomId]: (prev[roomId] ?? []).map((item) =>
+        item.id === message.id
+          ? {
+              ...item,
+              content: "Mensagem apagada pelo administrador da sala",
+              attachments: [],
+              isDeleted: true,
+            }
+          : item,
+      ),
+    }));
+
+    try {
+      await deleteLiveChatRoomMessage(roomId, message.id);
+    } catch {
+      try {
+        const messagesList = await fetchLiveChatRoomMessages(roomId);
+        setRoomMessages((prev) => ({
+          ...prev,
+          [roomId]: messagesList,
+        }));
+      } catch {
+        // keep optimistic state if reload also fails
+      }
+    }
+  }, [selectedRoom?.id]);
+
+  const handleDeleteTopicMessage = useCallback(async (message: LiveChatMessage) => {
+    if (!selectedTopicChat?.roomId || !message?.id) return;
+    const roomId = selectedTopicChat.roomId;
+    setTopicMessages((prev) => ({
+      ...prev,
+      [roomId]: (prev[roomId] ?? []).map((item) =>
+        item.id === message.id
+          ? {
+              ...item,
+              content: "Mensagem apagada pelo administrador da sala",
+              attachments: [],
+              isDeleted: true,
+            }
+          : item,
+      ),
+    }));
+
+    try {
+      await deleteTopicChatMessage(roomId, message.id);
+    } catch {
+      try {
+        const messagesList = await fetchTopicChatMessages(roomId);
+        setTopicMessages((prev) => ({
+          ...prev,
+          [roomId]: messagesList,
+        }));
+      } catch {
+        // keep optimistic state if reload also fails
+      }
+    }
+  }, [selectedTopicChat?.roomId]);
+
   const handleDeleteRoom = useCallback(async () => {
     if (!selectedRoom?.id) return;
     const roomId = selectedRoom.id;
@@ -465,6 +607,7 @@ export function NetworkPage() {
   }, [reload, selectedRoom?.id]);
 
   const selectedRoomMessages = selectedRoom ? roomMessages[selectedRoom.id] ?? [] : [];
+  const selectedTopicMessages = selectedTopicChat ? topicMessages[selectedTopicChat.roomId] ?? [] : [];
   const selectedRoomParticipants = selectedRoom ? roomParticipants[selectedRoom.id] ?? [] : [];
   const selectedRoomOnlineUsers = useMemo(() => {
     if (!selectedRoomParticipants.length) return [];
@@ -484,7 +627,35 @@ export function NetworkPage() {
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-white px-4 py-6 sm:px-6 sm:py-8 lg:py-12">
-      {selectedRoom ? (
+      {selectedTopicChat ? (
+        <ChatView
+          roomTitle={selectedTopicChat.name}
+          roomSubtitle="Chat de topico"
+          roomId={selectedTopicChat.roomId}
+          owner={{
+            name: selectedTopicChat.name,
+            avatarUrl: "/DotsThreeCircle.svg",
+            subtitle: selectedTopicChat.description ?? "Mensagens permanentes por topico",
+          }}
+          participants={[]}
+          messages={selectedTopicMessages as ChatMessage[]}
+          onBack={() => setSelectedTopicChat(null)}
+          onDeleteMessage={handleDeleteTopicMessage}
+          onViewUser={(message) => {
+            if (message.userId) {
+              navigate(`/users/${message.userId}`);
+              return;
+            }
+            if (message.senderUid) {
+              void fetchTopicChatUserProfile(message.senderUid).then((user) => {
+                if (user?.id) navigate(`/users/${user.id}`);
+              });
+            }
+          }}
+          canSendMessage={false}
+          showHeaderActions={false}
+        />
+      ) : selectedRoom ? (
         <>
           <ChatView
             roomTitle={selectedRoom.title}
@@ -503,6 +674,7 @@ export function NetworkPage() {
             }}
             onMoreOptions={() => setShowRoomDetails(true)}
             onSendMessage={handleSendMessage}
+            onDeleteMessage={handleDeleteMessage}
           />
           <ModalDetail
             open={showRoomDetails}
@@ -535,6 +707,30 @@ export function NetworkPage() {
             </button>
           </div>
 
+          <div className="mt-6 inline-flex rounded-2xl border border-[#D4D9F3] bg-[#F7F8FF] p-1">
+            <button
+              type="button"
+              onClick={() => setViewMode("live")}
+              className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium ${
+                viewMode === "live" ? "bg-white text-[#6B4DB8] shadow-sm" : "text-[#5B5F8A]"
+              }`}
+            >
+              <Radio className="h-4 w-4" aria-hidden />
+              Salas ao vivo
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("topics")}
+              className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium ${
+                viewMode === "topics" ? "bg-white text-[#6B4DB8] shadow-sm" : "text-[#5B5F8A]"
+              }`}
+            >
+              <MessageCircle className="h-4 w-4" aria-hidden />
+              Chats de topicos
+            </button>
+          </div>
+
+          {viewMode === "live" && (
           <div className="mt-6 flex flex-col gap-3 sm:mt-8 md:flex-row md:gap-4">
             <div className="relative w-full md:max-w-md">
               <Input
@@ -559,9 +755,10 @@ export function NetworkPage() {
               </SelectContent>
             </Select>
           </div>
-          {loading && <div className="mt-10 text-center">Carregando salas...</div>}
-          {error && <div className="mt-10 text-center text-red-500">{error}</div>}
-          {!loading && !error && (
+          )}
+          {viewMode === "live" && loading && <div className="mt-10 text-center">Carregando salas...</div>}
+          {viewMode === "live" && error && <div className="mt-10 text-center text-red-500">{error}</div>}
+          {viewMode === "live" && !loading && !error && (
             <>
               {totalRooms > 0 ? (
                 <ContentRooms
@@ -579,6 +776,47 @@ export function NetworkPage() {
                 <NoRoom />
               )}
             </>
+          )}
+
+          {viewMode === "topics" && (
+            <div className="mt-6">
+              {topicsLoading && <div className="mt-10 text-center">Carregando chats de topicos...</div>}
+              {topicsError && <div className="mt-10 text-center text-red-500">{topicsError}</div>}
+              {!topicsLoading && !topicsError && topicChats.length === 0 && (
+                <div className="mt-24 flex flex-col items-center justify-center text-center text-[#1F1235]">
+                  <div className="rounded-full bg-[#F1E7FF] p-5">
+                    <MessageCircle className="h-12 w-12 text-[#6B4DB8]" />
+                  </div>
+                  <h2 className="mt-6 text-2xl font-semibold">Nenhum topico encontrado</h2>
+                  <p className="mt-2 text-[#6C5CAB]">
+                    Nao ha chats de topicos disponiveis no momento.
+                  </p>
+                </div>
+              )}
+              {!topicsLoading && !topicsError && topicChats.length > 0 && (
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                  {topicChats.map((topic) => (
+                    <button
+                      key={topic.roomId}
+                      type="button"
+                      onClick={() => handleJoinTopicChat(topic)}
+                      className="flex min-h-[150px] flex-col items-start justify-between rounded-2xl border border-[#D4D9F3] bg-[#F7F9FF] p-5 text-left transition hover:-translate-y-0.5 hover:shadow-md"
+                    >
+                      <div>
+                        <div className="mb-3 grid h-11 w-11 place-items-center rounded-xl bg-[#ECE8FF] text-[#6B4DB8]">
+                          <MessageCircle className="h-5 w-5" aria-hidden />
+                        </div>
+                        <h3 className="text-lg font-semibold text-[#1F1235]">{topic.name}</h3>
+                        {topic.description && (
+                          <p className="mt-2 line-clamp-2 text-sm text-[#6F6C80]">{topic.description}</p>
+                        )}
+                      </div>
+                      <span className="mt-4 text-sm font-medium text-[#6B4DB8]">Entrar no chat</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
 
           <CreateSessionModal
